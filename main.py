@@ -1,35 +1,49 @@
 """
-function: test Eval
+test envs
+test rl algorithms
+test the whole project frameworks
 """
-
 import os
 import sys
-import torch
-import numpy as np
-sys.path.append('./Eval')
-sys.path.append('./Envs')
 
-from Eval.gamma_pred import Frame_eval
+sys.path.append ('./Envs')
+sys.path.append ('./Solver')
+
+import numpy as np
+import torch
+
+from config import device, opt
 from Envs.env_106 import Engine106 as Engine
 from Solver.TD3 import TD3
 
-from config import opt,device
+
+def test_config ():
+    print (opt.project_root)
+
+
+def test_import_by_path ():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location (
+        os.path.join (opt.project_root, 'scripts', 'reference', 'envs', 'utils.py'))
+    foo = importlib.util.module_from_spec (spec)
+    spec.loader.exec_module (foo)
+    foo.MyClass ()
+
+    # from importlib import import_module
+    # module_path = '/scr1/system/gamma-robot/scripts/reference/envs'
+    # # module_path = os.path.join(opt.project_root,'scripts','reference','envs','utils.py')
+    # module = import_module(module_path)
+
+
+def test_env ():
+    agent = Engine (opt)
+    agent.reset ()
+    action = np.array ([0, 0.01, 0.03])
+    agent.step (action)
 
 
 def main ():
-    if opt.video_reward:
-        test_path = os.path.join (opt.project_root, 'logs/td3_log/test{}'.format (opt.test_id))
-        if not os.path.exists(test_path):
-            os.mkdir(test_path)
-        eval = Frame_eval (img_path=os.path.join (opt.project_root, 'logs/td3_log/test{}'.format (opt.test_id), 'epoch-0'),
-                           frame_len=opt.cut_frame_num,
-                           start_id=0,
-                           memory_path=os.path.join (opt.project_root, 'logs/td3_log/test{}'.format (opt.test_id),
-                                                     'memory'),
-                           class_label=opt.action_id)
-        env = Engine (opt, eval)
-    else:
-        env = Engine (opt)
+    env = Engine (opt)
 
     state_dim = env.observation_space
     action_dim = len (env.action_space['high'])
@@ -66,7 +80,6 @@ def main ():
                 action = action + np.random.normal (0, max_action * opt.noise_level, size=action.shape)
                 action = action.clip (env.action_space['low'], env.action_space['high'])
                 next_state, reward, done, info = env.step (action)
-
                 ep_r += reward
                 # if opt.render and i >= opt.render_interval : env.render()
                 agent.memory.push ((state, next_state, action, reward, np.float (done)))
@@ -89,5 +102,6 @@ def main ():
     else:
         raise NameError ("mode wrong!!!")
 
+
 if __name__ == '__main__':
-    main()
+    main ()

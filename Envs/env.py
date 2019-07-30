@@ -26,7 +26,7 @@ class Engine:
     def __init__(self,opt):
 
         self.opt = opt
-        self.class_id = opt.class_id
+        self.class_id = opt.action_id
         self.video_id = opt.video_id
         self.test_id = opt.test_id
         self.cut_frame_num = opt.cut_frame_num

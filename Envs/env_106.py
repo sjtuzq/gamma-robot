@@ -26,9 +26,10 @@ egl = pkgutil.get_loader ('eglRenderer')
 from .env import Engine
 
 class Engine106(Engine):
-    def __init__(self,opt):
+    def __init__(self,opt,eval=None):
         super(Engine106,self).__init__(opt)
         self.opt = opt
+        self.eval = eval
 
     def init_grasp(self):
         pos_traj = np.load (os.path.join (self.env_root, 'init', 'pos.npy'))
@@ -114,17 +115,27 @@ class Engine106(Engine):
 
     def get_reward (self):
         distance = sum ([(x - y) ** 2 for x, y in zip (self.start_pos, self.target_pos)]) ** 0.5
-
         box = p.getAABB (self.box_id, -1)
         box_center = [(x + y) * 0.5 for x, y in zip (box[0], box[1])]
         obj = p.getAABB (self.obj_id, -1)
         obj_center = [(x + y) * 0.5 for x, y in zip (obj[0], obj[1])]
         aabb_dist = sum ([(x - y) ** 2 for x, y in zip (box_center, obj_center)]) ** 0.5
 
-        if self.opt.reward_diff:
-            reward = (self.last_aabb_dist - aabb_dist) * 100
+        if self.opt.video_reward:
+            if ((self.seq_num-1)%self.opt.give_reward_num==self.opt.give_reward_num-1) \
+                    and self.seq_num>=self.opt.cut_frame_num:
+                self.eval.get_caption()
+                rank,probability = self.eval.eval()
+                reward = probability - 1
+                self.info += 'rank: {}\n'.format(rank)
+                self.eval.update(img_path=self.log_path,start_id=self.seq_num-1-self.opt.cut_frame_num)
+            else:
+                reward = 0
         else:
-            reward = (0.5-aabb_dist)*100
+            if self.opt.reward_diff:
+                reward = (self.last_aabb_dist - aabb_dist) * 100
+            else:
+                reward = (0.5-aabb_dist)*100
 
         # reward = (self.last_aabb_dist-aabb_dist)*100
         self.last_aabb_dist = aabb_dist
@@ -149,23 +160,12 @@ class Engine106(Engine):
         left_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 13, -1)
         right_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 17, -1)
 
-        # left_closet_info = p.getClosestPoints(self.kukaId,self.obj_id,0.3,13,-1)
-        # right_closet_info = p.getClosestPoints(self.kukaId,self.obj_id,0.3,17,-1)
-
-        # print(left_closet_info,right_closet_info)
-        # print(left_closet_info[0][8],right_closet_info[0][8],p.getLinkState(self.kukaId,13)[0],p.getLinkState(self.kukaId,17)[0])
-
-        # if len (left_closet_info) > 0:
-        #     print ('13:', left_closet_info[0][8])
-        # if len (right_closet_info) > 0:
-        #     print ('17:', right_closet_info[0][8])
-
         if self.opt.obj_away_loss:
             if len (left_closet_info)==0 and len (right_closet_info)==0:
                 done = True
                 reward = self.opt.out_reward
 
-        if aabb_dist<self.opt.end_distance:
+        if aabb_dist<self.opt.end_distance and (not self.opt.video_reward):
             done = True
             reward = 100
 
