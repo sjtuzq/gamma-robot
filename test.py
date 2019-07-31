@@ -10,7 +10,9 @@ sys.path.append('./Eval')
 sys.path.append('./Envs')
 
 from Eval.gamma_pred import Frame_eval
-from Envs.env_106 import Engine106 as Engine
+from Envs.env_107 import Engine107
+from Envs.env_106 import Engine106
+
 from Solver.TD3 import TD3
 
 from config import opt,device
@@ -21,15 +23,15 @@ def main ():
         test_path = os.path.join (opt.project_root, 'logs/td3_log/test{}'.format (opt.test_id))
         if not os.path.exists(test_path):
             os.mkdir(test_path)
-        eval = Frame_eval (img_path=os.path.join (opt.project_root, 'logs/td3_log/test{}'.format (opt.test_id), 'epoch-0'),
+        evaluator = Frame_eval (img_path=os.path.join (opt.project_root, 'logs/td3_log/test{}'.format (opt.test_id), 'epoch-0'),
                            frame_len=opt.cut_frame_num,
                            start_id=0,
                            memory_path=os.path.join (opt.project_root, 'logs/td3_log/test{}'.format (opt.test_id),
                                                      'memory'),
                            class_label=opt.action_id)
-        env = Engine (opt, eval)
+        env = eval('Engine{} (opt, evaluator)'.format(opt.action_id))
     else:
-        env = Engine (opt)
+        env = eval('Engine{} (opt)'.format(opt.action_id))
 
     state_dim = env.observation_space
     action_dim = len (env.action_space['high'])
@@ -72,7 +74,7 @@ def main ():
                 agent.memory.push ((state, next_state, action, reward, np.float (done)))
                 if i + 1 % 10 == 0:
                     print ('Episode {},  The memory size is {} '.format (i, len (agent.memory.storage)))
-                if len (agent.memory.storage) >= opt.capacity - 1:
+                if len (agent.memory.storage) >= opt.start_train - 1:
                     agent.update (opt.update_time)
 
                 state = next_state

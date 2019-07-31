@@ -92,13 +92,23 @@ class Engine106(Engine):
                 up_traj = point2traj ([pos, [pos[0], pos[1] + 0.2, pos[2]]])
                 start_id = self.core (up_traj, orn_traj, start_id)
 
-        self.box_file = os.path.join(self.env_root,"urdf/openbox/openbox.urdf")
-        self.box_position = [0.45, -0.1, 0.34]
-        self.box_scaling = 0.0003
-        self.box_orientation = p.getQuaternionFromEuler ([0, 0, 0])
-        self.box_id = p.loadURDF (fileName=self.box_file, basePosition=self.box_position,
-                                  baseOrientation=self.box_orientation,
-                                  globalScaling=self.box_scaling, physicsClientId=self.physical_id)
+
+        if self.opt.rand_box == 'rand':
+            self.box_file = os.path.join(self.env_root,"urdf/openbox/openbox.urdf")
+            self.box_position = [0.45+(random.random()-0.5)*0.2, -0.1+(random.random()-0.5)*0.4, 0.34]
+            self.box_scaling = 0.0003
+            self.box_orientation = p.getQuaternionFromEuler ([0, 0, 0])
+            self.box_id = p.loadURDF (fileName=self.box_file, basePosition=self.box_position,
+                                      baseOrientation=self.box_orientation,
+                                      globalScaling=self.box_scaling, physicsClientId=self.physical_id)
+        else:
+            self.box_file = os.path.join (self.env_root, "urdf/openbox/openbox.urdf")
+            self.box_position = [0.45, -0.1, 0.34]
+            self.box_scaling = 0.0003
+            self.box_orientation = p.getQuaternionFromEuler ([0, 0, 0])
+            self.box_id = p.loadURDF (fileName=self.box_file, basePosition=self.box_position,
+                                      baseOrientation=self.box_orientation,
+                                      globalScaling=self.box_scaling, physicsClientId=self.physical_id)
 
         texture_path = os.path.join(self.env_root,'texture/sun_textures')
         texture_file = os.path.join (texture_path, random.sample (os.listdir (texture_path), 1)[0])
@@ -144,32 +154,41 @@ class Engine106(Engine):
         self.info += 'now distance:{}\n'.format (distance)
         self.info += 'AABB distance:{}\n'.format (aabb_dist)
 
-
+        # check whether the seqence number is out of limit
         if self.seq_num >= self.max_seq_num:
             done = True
         else:
             done = False
 
+        # check whether the object are out of order
         for axis_dim in range (3):
             if self.start_pos[axis_dim] < self.axis_limit[axis_dim][0] or \
                     self.start_pos[axis_dim] > self.axis_limit[axis_dim][1]:
                 done = True
                 reward = self.opt.out_reward
 
-
+        # check whether the object is still in the gripper
         left_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 13, -1)
         right_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 17, -1)
-
         if self.opt.obj_away_loss:
             if len (left_closet_info)==0 and len (right_closet_info)==0:
                 done = True
-                reward = self.opt.out_reward
+                # let the model learn the reward automatically, so delete the following line
+                # reward = self.opt.away_reward
 
-        if aabb_dist<self.opt.end_distance and (not self.opt.video_reward):
+        # check whether the object is put into the box
+        check = [0, 0, 0]
+        for axis_dim in range (3):
+            lower = min (box[0][axis_dim], box[1][axis_dim])
+            upper = max (box[0][axis_dim], box[1][axis_dim])
+            if obj_center[axis_dim] >= lower and obj_center[axis_dim] <= upper:
+                check[axis_dim] = 1
+        if sum (check) == 3:
             done = True
-            reward = 100
+            if not self.opt.video_reward:
+                reward = 100
 
-        # reward = -1
+
         self.info += 'reward: {}\n\n'.format (reward)
         self.log_info.write (self.info)
         print (self.info)

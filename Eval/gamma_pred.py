@@ -50,14 +50,18 @@ class Frame_eval:
         prob = prob[0]
 
         # using softmax
-        # prob = torch.softmax(torch.tensor(prob).float(),0).data.numpy()
+        prob = torch.softmax(torch.tensor(prob).float(),0).data.numpy()
+
+        prob = (prob - prob.mean())/np.std(prob)
 
         rank = np.argwhere (pred[0] == self.class_label).squeeze () + 1
         probability = prob[rank - 1]
-        if self.class_label==86:
-            probability = prob[rank - 1] - prob[np.argwhere (pred[0] == 45).squeeze ()]*0.8
-        if self.class_label==94:
-            probability = prob[rank - 1] - prob[np.argwhere (pred[0] == 45).squeeze ()]*0.8
+
+        # if self.class_label==86:
+        #     probability = prob[rank - 1] - prob[np.argwhere (pred[0] == 45).squeeze ()]*0.8
+        # if self.class_label==94:
+        #     probability = prob[rank - 1] - prob[np.argwhere (pred[0] == 45).squeeze ()]*0.8
+
         return rank,probability
 
 def test_class():
@@ -142,16 +146,16 @@ def check_frames():
 
 
 if __name__ == '__main__':
-    img_path = '/scr1/system/beta-robot/dataset/ddpg_log/test14/epoch-2'
+    img_path = '/scr1/system/beta-robot/dataset/actions/107-6/frames'
 
     # writer = open('../tmp/test_gap.txt','w')
     # frame_len_list = [10,20,30,40,50,60,70,80,90]
     # for frame_len in frame_len_list:
     agent = Frame_eval(img_path=img_path,
-                       frame_len = 20,
-                       start_id = 0,
+                       frame_len = 60,
+                       start_id = 40,
                        memory_path = '/scr1/system/beta-robot/dataset/ddpg_log/memory',
-                       class_label=86)
+                       class_label=107)
     agent.update(start_id=0)
     agent.get_caption()
     rank,propability = agent.eval()

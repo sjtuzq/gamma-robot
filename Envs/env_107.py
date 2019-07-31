@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
-
 """
-action 107: put sth next to sth
-
-TODO : recover these functions: get_reward
+   env for action 107: put sth next to sth
 """
 import pybullet as p
 import time
@@ -31,9 +28,10 @@ egl = pkgutil.get_loader ('eglRenderer')
 from .env import Engine
 
 class Engine107(Engine):
-    def __init__(self,opt):
+    def __init__(self,opt,eval=None):
         super(Engine107,self).__init__(opt)
         self.opt = opt
+        self.eval = eval
 
     def init_grasp(self):
         pos_traj = np.load (os.path.join (self.env_root, 'init', 'pos.npy'))
@@ -69,39 +67,94 @@ class Engine107(Engine):
             p.stepSimulation ()
             start_id += 1
 
-        self.obj2_file = os.path.join (self.env_root, "urdf/objmodels/urdfs/cup.urdf")
-        self.obj2_position = [0.45, 0.08, 0.34]
-        # self.obj_position = [0.55, 0, 0.34]
-        # self.obj_position = [0.40, -0.15, 0.34]
-        self.obj2_orientation = p.getQuaternionFromEuler ([-math.pi / 2, 0, 0])
-        # self.obj_orientation = p.getQuaternionFromEuler([0, math.pi/2, 0])
-        self.obj2_scaling = 0.11
-        self.obj2_id = p.loadURDF (fileName=self.obj2_file, basePosition=self.obj2_position,
-                                  baseOrientation=self.obj2_orientation,
-                                  globalScaling=self.obj2_scaling, physicsClientId=self.physical_id)
+        pos = p.getLinkState (self.kukaId, 7)[0]
+        up_traj = point2traj([pos, [pos[0], pos[1], pos[2]+0.3]])
+        start_id = self.core(up_traj, orn_traj,start_id)
+
+        if self.opt.rand_start == 'rand':
+            # move in z-axis direction
+            pos = p.getLinkState (self.kukaId, 7)[0]
+            up_traj = point2traj([pos, [pos[0], pos[1], pos[2]+(random.random()-0.5)*0.1]])
+            start_id = self.core(up_traj, orn_traj,start_id)
+
+            # move in y-axis direction
+            pos = p.getLinkState (self.kukaId, 7)[0]
+            up_traj = point2traj ([pos, [pos[0], pos[1]+(random.random()-0.5)*0.2+0.2, pos[2]]])
+            start_id = self.core (up_traj, orn_traj, start_id)
+
+            # move in x-axis direction
+            pos = p.getLinkState (self.kukaId, 7)[0]
+            up_traj = point2traj ([pos, [pos[0]+(random.random()-0.5)*0.2, pos[1], pos[2]]])
+            start_id = self.core (up_traj, orn_traj, start_id)
+
+        elif self.opt.rand_start == 'two':
+            prob = random.random()
+            if prob<0.5:
+                pos = p.getLinkState (self.kukaId, 7)[0]
+                up_traj = point2traj ([pos, [pos[0], pos[1] + 0.2, pos[2]]])
+                start_id = self.core (up_traj, orn_traj, start_id)
+
+
+        if self.opt.rand_box == 'rand':
+            self.box_file = os.path.join(self.env_root,"urdf/objmodels/urdfs/cup.urdf")
+            self.box_position = [0.45+(random.random()-0.5)*0.2, -0.18+(random.random()-0.5)*0.4, 0.34]
+            self.box_orientation = p.getQuaternionFromEuler([-math.pi/2, 0, 0])
+            self.box_scaling = 0.21
+            self.box_id = p.loadURDF(fileName=self.box_file, basePosition=self.box_position,baseOrientation=self.box_orientation,
+                                     globalScaling=self.box_scaling,physicsClientId=self.physical_id)
+
+        else:
+            self.box_file = os.path.join(self.env_root,"urdf/objmodels/urdfs/cup.urdf")
+            self.box_position = [0.45, -0.18, 0.34]
+            self.box_orientation = p.getQuaternionFromEuler([-math.pi/2, 0, 0])
+            self.box_scaling = 0.21
+            self.box_id = p.loadURDF(fileName=self.box_file, basePosition=self.box_position,baseOrientation=self.box_orientation,
+                                     globalScaling=self.box_scaling,physicsClientId=self.physical_id)
 
         texture_path = os.path.join(self.env_root,'texture/sun_textures')
         texture_file = os.path.join (texture_path, random.sample (os.listdir (texture_path), 1)[0])
         textid = p.loadTexture (texture_file)
-        # p.changeVisualShape (self.obj2_id, -1, rgbaColor=[1, 1, 1, 0.9])
-        p.changeVisualShape (self.obj2_id, -1, textureUniqueId=textid)
+        # p.changeVisualShape (self.box_id, -1, rgbaColor=[1, 1, 1, 0.9])
+        p.changeVisualShape (self.box_id, -1, textureUniqueId=textid)
         self.start_pos = p.getLinkState (self.kukaId, 7)[0]
 
+        box = p.getAABB (self.box_id, -1)
+        box_center = [(x + y) * 0.5 for x, y in zip (box[0], box[1])]
+        obj = p.getAABB (self.obj_id, -1)
+        obj_center = [(x + y) * 0.5 for x, y in zip (obj[0], obj[1])]
+        self.last_aabb_dist = sum ([(x - y) ** 2 for x, y in zip (box_center, obj_center)]) ** 0.5
 
     def get_reward (self):
         distance = sum ([(x - y) ** 2 for x, y in zip (self.start_pos, self.target_pos)]) ** 0.5
-
-        obj2 = p.getAABB (self.obj2_id, -1)
-        obj2_center = [(x + y) * 0.5 for x, y in zip (obj2[0], obj2[1])]
+        box = p.getAABB (self.box_id, -1)
+        box_center = [(x + y) * 0.5 for x, y in zip (box[0], box[1])]
         obj = p.getAABB (self.obj_id, -1)
         obj_center = [(x + y) * 0.5 for x, y in zip (obj[0], obj[1])]
-        aabb_dist = sum ([(x - y) ** 2 for x, y in zip (obj2_center, obj_center)]) ** 0.5
+        aabb_dist = sum ([(x - y) ** 2 for x, y in zip (box_center, obj_center)]) ** 0.5
 
-        reward = (0.5-aabb_dist)*100
+        if self.opt.video_reward:
+            if ((self.seq_num-1)%self.opt.give_reward_num==self.opt.give_reward_num-1) \
+                    and self.seq_num>=self.opt.cut_frame_num:
+                self.eval.get_caption()
+                rank,probability = self.eval.eval()
+                reward = probability - 1
+                self.info += 'rank: {}\n'.format(rank)
+                self.eval.update(img_path=self.log_path,start_id=self.seq_num-1-self.opt.cut_frame_num)
+            else:
+                reward = 0
+        else:
+            if self.opt.reward_diff:
+                reward = (self.last_aabb_dist - aabb_dist) * 100
+            else:
+                reward = (0.5-aabb_dist)*100
+
+        # reward = (self.last_aabb_dist-aabb_dist)*100
+        self.last_aabb_dist = aabb_dist
 
         # calculate whether it is done
         self.info += 'now distance:{}\n'.format (distance)
         self.info += 'AABB distance:{}\n'.format (aabb_dist)
+
 
         if self.seq_num >= self.max_seq_num:
             done = True
@@ -112,9 +165,17 @@ class Engine107(Engine):
             if self.start_pos[axis_dim] < self.axis_limit[axis_dim][0] or \
                     self.start_pos[axis_dim] > self.axis_limit[axis_dim][1]:
                 done = True
-                reward = -10
+                reward = self.opt.out_reward
 
-        if aabb_dist<0.1:
+        left_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 13, -1)
+        right_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 17, -1)
+
+        if self.opt.obj_away_loss:
+            if len (left_closet_info)==0 and len (right_closet_info)==0:
+                done = True
+                reward = self.opt.away_reward
+
+        if aabb_dist<self.opt.end_distance and (not self.opt.video_reward):
             done = True
             reward = 100
 

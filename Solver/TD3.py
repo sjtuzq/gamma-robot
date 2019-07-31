@@ -12,6 +12,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Normal
 from tensorboardX import SummaryWriter
+import torchvision.models as models
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -58,8 +59,10 @@ class Replay_buffer():
 
 class Actor(nn.Module):
 
-    def __init__(self, state_dim, action_dim, max_action):
+    def __init__(self, state_dim, action_dim, max_action,opt):
         super(Actor, self).__init__()
+
+        self.opt = opt
 
         self.fc1 = nn.Linear(state_dim, 400)
         self.fc2 = nn.Linear(400, 300)
@@ -67,7 +70,17 @@ class Actor(nn.Module):
 
         self.max_action = max_action
 
+        self.cnn = nn.Sequential(
+            models.resnet18 (pretrained=True).to(device),
+            nn.Linear (in_features=1000, out_features=512),
+            nn.ReLU (),
+            nn.Linear (in_features=512, out_features=state_dim),
+            nn.ReLU (),
+        )
+
     def forward(self, state):
+        if self.opt.observation == 'before_cnn':
+            state = self.cnn(state.transpose (1, 3))
         a = F.relu(self.fc1(state))
         a = F.relu(self.fc2(a))
         a = torch.tanh(self.fc3(a)) * self.max_action
@@ -76,14 +89,27 @@ class Actor(nn.Module):
 
 class Critic(nn.Module):
 
-    def __init__(self, state_dim, action_dim):
+    def __init__(self, state_dim, action_dim,opt):
         super(Critic, self).__init__()
+
+        self.opt = opt
 
         self.fc1 = nn.Linear(state_dim + action_dim, 400)
         self.fc2 = nn.Linear(400, 300)
         self.fc3 = nn.Linear(300, 1)
 
+        self.cnn = nn.Sequential(
+            models.resnet18(pretrained=True).to(device),
+            nn.Linear (in_features=1000, out_features=512),
+            nn.ReLU (),
+            nn.Linear (in_features=512, out_features=state_dim),
+            nn.ReLU (),
+        )
+
     def forward(self, state, action):
+        if self.opt.observation == 'before_cnn':
+            state = self.cnn(state.transpose (1, 3))
+
         state_action = torch.cat([state, action], 1)
 
         q = F.relu(self.fc1(state_action))
@@ -98,12 +124,12 @@ class TD3():
         self.args = opt
         self.directory = directory
 
-        self.actor = Actor(state_dim, action_dim, max_action).to(device)
-        self.actor_target = Actor(state_dim, action_dim, max_action).to(device)
-        self.critic_1 = Critic(state_dim, action_dim).to(device)
-        self.critic_1_target = Critic(state_dim, action_dim).to(device)
-        self.critic_2 = Critic(state_dim, action_dim).to(device)
-        self.critic_2_target = Critic(state_dim, action_dim).to(device)
+        self.actor = Actor(state_dim, action_dim, max_action, opt).to(device)
+        self.actor_target = Actor(state_dim, action_dim, max_action, opt).to(device)
+        self.critic_1 = Critic(state_dim, action_dim, opt).to(device)
+        self.critic_1_target = Critic(state_dim, action_dim, opt).to(device)
+        self.critic_2 = Critic(state_dim, action_dim, opt).to(device)
+        self.critic_2_target = Critic(state_dim, action_dim, opt).to(device)
 
         self.actor_optimizer = optim.Adam(self.actor.parameters())
         self.critic_1_optimizer = optim.Adam(self.critic_1.parameters())
@@ -121,7 +147,10 @@ class TD3():
         self.num_training = 0
 
     def select_action(self, state):
-        state = torch.tensor(state.reshape(1, -1)).float().to(device)
+        if self.args.observation == 'before_cnn':
+            state = torch.tensor(state).float().squeeze().unsqueeze(0).to(device)
+        else:
+            state = torch.tensor(state.reshape(1, -1)).float().to(device)
         return self.actor(state).cpu().data.numpy().flatten()
 
     def update(self, num_iteration):
@@ -139,7 +168,7 @@ class TD3():
             reward = torch.FloatTensor(r).to(device)
 
             # Select next action according to target policy:
-            noise = torch.ones_like(action).data.normal_(0, self.args.policy_noise).to(device)
+            noise = torch.ones_like(action).data.normal_(0, self.args.each_action_lim*self.args.policy_noise).to(device)
             noise = noise.clamp(-self.args.noise_clip, self.args.noise_clip)
             next_action = (self.actor_target(next_state) + noise)
             next_action = next_action.clamp(-self.max_action, self.max_action)

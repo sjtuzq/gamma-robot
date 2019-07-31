@@ -85,7 +85,7 @@ def main ():
                 agent.memory.push ((state, next_state, action, reward, np.float (done)))
                 if i + 1 % 10 == 0:
                     print ('Episode {},  The memory size is {} '.format (i, len (agent.memory.storage)))
-                if len (agent.memory.storage) >= opt.capacity - 1:
+                if len (agent.memory.storage) >= opt.start_train - 1:
                     agent.update (opt.update_time)
 
                 state = next_state

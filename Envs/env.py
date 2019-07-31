@@ -104,8 +104,8 @@ class Engine:
         self.view_matrix, self.proj_matrix = get_view (self.opt)
         self.q_home = np.array((0., -np.pi/6., 0., -5./6.*np.pi, 0., 2./3.*np.pi, 0.))
         self.idx_ee = self.numJoints - 6
-        self.w = 640
-        self.h = 480
+        self.w = self.opt.img_w
+        self.h = self.opt.img_h
 
     def init_gripper(self):
         self.activeGripperJointIndexList = [10, 12, 14, 16, 18, 19]
@@ -186,8 +186,8 @@ class Engine:
                 index_ = self.activeGripperJointIndexList[j]
                 p.resetJointState (self.kukaId, index_, self.gripperPos[j], 0)
 
-            img_info = p.getCameraImage (width=640,
-                                         height=480,
+            img_info = p.getCameraImage (width=self.w,
+                                         height=self.h,
                                          viewMatrix=self.view_matrix,
                                          projectionMatrix=self.proj_matrix,
                                          shadow=-1,
@@ -246,8 +246,8 @@ class Engine:
                                          controlMode=p.POSITION_CONTROL, targetPositions=self.gripperPos,
                                          forces=[self.gripperForce] * len (self.activeGripperJointIndexList))
             p.stepSimulation ()
-            img_info = p.getCameraImage (width=640,
-                                         height=480,
+            img_info = p.getCameraImage (width=self.w,
+                                         height=self.h,
                                          viewMatrix=self.view_matrix,
                                          projectionMatrix=self.proj_matrix,
                                          shadow=-1,
@@ -292,14 +292,14 @@ class Engine:
                                         forces=self.forces)
 
             p.stepSimulation()
-            img_info = p.getCameraImage (width=640,
-                                         height=480,
+            img_info = p.getCameraImage (width=self.w,
+                                         height=self.h,
                                          viewMatrix=self.view_matrix,
                                          projectionMatrix=self.proj_matrix,
                                          shadow=-1,
                                          flags=p.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX,
                                          renderer=p.ER_TINY_RENDERER)
-            self.save_video(img_info,start_id+i)
+            # self.save_video(img_info,start_id+i)
         return start_id+len(pos_traj)
 
     def init_ddpg(self):
@@ -311,14 +311,16 @@ class Engine:
             self.observation_space = 7
         elif self.opt.observation == 'end_pos':
             self.observation_space = 3
+        elif self.opt.observation == 'before_cnn':
+            self.observation_space = 256
         else:
             self.observation_space = 32
-        self.each_action_lim = 0.03
+        self.each_action_lim = self.opt.each_action_lim
         low = [-self.each_action_lim]*3
         high = [self.each_action_lim]*3
         self.action_space = {'low':low,'high':high}
         self.max_seq_num = 500
-        self.min_dis_lim = 0.05
+        self.min_dis_lim = self.opt.end_distance
         self.axis_limit = [eval(self.opt.axis_limit_x),eval(self.opt.axis_limit_y),
                            eval(self.opt.axis_limit_z)]
         self.cnn = CNN()
@@ -374,6 +376,8 @@ class Engine:
             observation = np.array([p.getJointState(self.kukaId,i)[0] for i in range(self.kukaEndEffectorIndex)])
         elif self.opt.observation == 'end_pos':
             observation = np.array(p.getLinkState (self.kukaId, 7)[0])
+        elif self.opt.observation == 'before_cnn':
+            observation = np.array(observation)
         return observation
 
     def step(self,action):
@@ -425,6 +429,8 @@ class Engine:
             self.observation = np.array([p.getJointState (self.kukaId, i)[0] for i in range (self.kukaEndEffectorIndex)])
         elif self.opt.observation == 'end_pos':
             self.observation = np.array(p.getLinkState (self.kukaId, 7)[0])
+        elif self.opt.observation == 'before_cnn':
+            self.observation = np.array(self.observation)
         self.start_pos =  p.getLinkState(self.kukaId,7)[0]
 
         return self.get_reward()
