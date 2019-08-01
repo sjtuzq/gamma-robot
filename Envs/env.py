@@ -33,6 +33,13 @@ class Engine:
         self.give_reward_num = opt.give_reward_num
         self.init_ddpg ()
 
+        if self.opt.video_reward:
+            self.eval = self.opt.load_video_pred
+
+        if self.opt.use_dmp:
+            self.dmp = self.opt.load_dmp
+            assert (self.opt.video_reward)
+
         self.dataset_root = os.path.join(opt.project_root,'dataset')
         self.log_root = os.path.join(opt.project_root,'logs')
         self.log_root = safe_path(self.log_root+'/td3_log/test{}'.format(self.test_id))
@@ -225,8 +232,27 @@ class Engine:
             orn_traj.append (orn)
             print(i)
 
-        np.save (os.path.join(self.env_root,'init','pos.npy'), np.array (pos_traj))
-        np.save (os.path.join(self.env_root,'init','orn.npy'), np.array (orn_traj))
+        # np.save (os.path.join(self.env_root,'init','pos.npy'), np.array (pos_traj))
+        # np.save (os.path.join(self.env_root,'init','orn.npy'), np.array (orn_traj))
+
+    def dmp_imitation(self):
+        trajectories = []
+        for file in os.listdir(self.opt.actions_root):
+            action_id = int(file.split('-')[0])
+            if action_id == self.opt.action_id:
+                now_data_q = np.load(os.path.join(self.opt.actions_root,file,'q.npy'))
+                pos_traj, orn_traj = [], []
+                for i in range (now_data_q.shape[0]):
+                    poses = now_data_q[i]
+                    for j in range (7):
+                        p.resetJointState (self.kukaId, j, poses[j], now_data_q[i][j])
+                    state = p.getLinkState (self.kukaId, 7)
+                    pos = state[0]
+                    orn = state[1]
+                    pos_traj.append (pos)
+                    orn_traj.append (orn)
+                trajectories.append(np.array(pos_traj))
+        return np.array(trajectories)
 
     def init_grasp(self):
         pos_traj = np.load (os.path.join(self.env_root,'init','pos.npy'))
@@ -339,6 +365,11 @@ class Engine:
                            eval(self.opt.axis_limit_z)]
         self.cnn = CNN()
 
+    def init_dmp(self):
+        if self.opt.use_dmp and self.opt.dmp_imitation:
+            dmp_imitation_data = self.dmp_imitation ()
+            self.dmp.imitate (dmp_imitation_data)
+
     def reset(self):
         try:
             self.destroy()
@@ -369,6 +400,7 @@ class Engine:
         # self.evaluator.update (img_path=self.log_path, start_id=0)
         self.seq_num = 0
         self.init_robot ()
+        self.init_dmp()
         self.init_plane ()
         self.init_motion ()
         self.init_gripper ()
@@ -405,6 +437,31 @@ class Engine:
         return observation
 
     def step(self,action):
+        if self.opt.use_dmp:
+            return_value = self.step_dmp(action)
+        else:
+            return_value = self.step_without_dmp(action)
+        return return_value
+
+    def step_dmp(self,action):
+        action = action.squeeze()
+        self.dmp.set_start(list(self.start_pos))
+        dmp_end_pos = [x+y for x,y in zip(self.start_pos,action)]
+        self.dmp.set_goal(dmp_end_pos)
+        self.traj = self.dmp.get_traj()
+
+        dmp_observations = []
+        for small_action in self.traj:
+            small_observation = self.step_without_dmp(small_action)
+            dmp_observations.append(small_observation)
+
+        self.observation = dmp_observations[0][0]
+        reward = dmp_observations[-1][1]
+        done = True
+        return self.observation,reward,done,self.info
+
+
+    def step_without_dmp(self,action):
         action = action.squeeze()
         self.seq_num += 1
         self.info = ''

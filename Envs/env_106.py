@@ -26,10 +26,8 @@ egl = pkgutil.get_loader ('eglRenderer')
 from .env import Engine
 
 class Engine106(Engine):
-    def __init__(self,opt,eval=None):
+    def __init__(self,opt):
         super(Engine106,self).__init__(opt)
-        self.opt = opt
-        self.eval = eval
 
     def init_grasp(self):
         pos_traj = np.load (os.path.join (self.env_root, 'init', 'pos.npy'))

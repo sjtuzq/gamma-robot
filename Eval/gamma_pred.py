@@ -51,9 +51,9 @@ class Frame_eval:
         prob = prob[0]
 
         # using softmax
-        prob = torch.softmax(torch.tensor(prob).float(),0).data.numpy()
-
-        prob = (prob - prob.mean())/np.std(prob)
+        if self.opt.prob_softmax:
+            prob = torch.softmax(torch.tensor(prob).float(),0).data.numpy()
+            prob = (prob - prob.mean())/np.std(prob)
 
         rank = np.argwhere (pred[0] == self.class_label).squeeze () + 1
         probability = prob[rank - 1]
