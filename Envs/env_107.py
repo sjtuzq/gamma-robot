@@ -69,6 +69,11 @@ class Engine107(Engine):
         up_traj = point2traj([pos, [pos[0], pos[1], pos[2]+0.3]])
         start_id = self.core(up_traj, orn_traj,start_id)
 
+        traj_path = os.path.join (self.opt.project_root, 'scripts', 'Dmp', 'traj.npy')
+        t_pos = np.load(traj_path)[0]
+        up_traj = point2traj ([pos, t_pos])
+        start_id = self.core (up_traj, orn_traj, start_id)
+
         if self.opt.rand_start == 'rand':
             # move in z-axis direction
             pos = p.getLinkState (self.kukaId, 7)[0]
@@ -146,14 +151,14 @@ class Engine107(Engine):
             else:
                 reward = (0.5-aabb_dist)*100
 
-        # reward = (self.last_aabb_dist-aabb_dist)*100
-        if (self.opt.test_id==86 or self.opt.test_id==87):
-            self.last_aabb_dist_storage[(self.seq_num)%20] = aabb_dist
-            self.last_aabb_dist = self.last_aabb_dist_storage[(self.seq_num+1)%20]
-            # if self.opt.test_id==86 and self.seq_num<20:
-            #     self.last_aabb_dist = self.last_aabb_dist_storage[0]
-        else:
-            self.last_aabb_dist = aabb_dist
+        # # reward = (self.last_aabb_dist-aabb_dist)*100
+        # if (self.opt.test_id==86 or self.opt.test_id==87):
+        #     self.last_aabb_dist_storage[(self.seq_num)%20] = aabb_dist
+        #     self.last_aabb_dist = self.last_aabb_dist_storage[(self.seq_num+1)%20]
+        #     # if self.opt.test_id==86 and self.seq_num<20:
+        #     #     self.last_aabb_dist = self.last_aabb_dist_storage[0]
+        # else:
+        #     self.last_aabb_dist = aabb_dist
 
         # calculate whether it is done
         self.info += 'now distance:{}\n'.format (distance)
@@ -187,8 +192,8 @@ class Engine107(Engine):
             if (not self.opt.video_reward):
                 reward = 100
 
-        if (self.opt.test_id==85 or self.opt.test_id==87) and self.seq_num<=19:
-            reward = 0
+        # if (self.opt.test_id==85 or self.opt.test_id==87) and self.seq_num<=19:
+        #     reward = 0
 
         # reward = -1
         self.info += 'reward: {}\n\n'.format (reward)

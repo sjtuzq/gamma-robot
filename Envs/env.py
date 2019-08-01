@@ -235,25 +235,6 @@ class Engine:
         # np.save (os.path.join(self.env_root,'init','pos.npy'), np.array (pos_traj))
         # np.save (os.path.join(self.env_root,'init','orn.npy'), np.array (orn_traj))
 
-    def dmp_imitation(self):
-        trajectories = []
-        for file in os.listdir(self.opt.actions_root):
-            action_id = int(file.split('-')[0])
-            if action_id == self.opt.action_id:
-                now_data_q = np.load(os.path.join(self.opt.actions_root,file,'q.npy'))
-                pos_traj, orn_traj = [], []
-                for i in range (now_data_q.shape[0]):
-                    poses = now_data_q[i]
-                    for j in range (7):
-                        p.resetJointState (self.kukaId, j, poses[j], now_data_q[i][j])
-                    state = p.getLinkState (self.kukaId, 7)
-                    pos = state[0]
-                    orn = state[1]
-                    pos_traj.append (pos)
-                    orn_traj.append (orn)
-                trajectories.append(np.array(pos_traj))
-        return np.array(trajectories)
-
     def init_grasp(self):
         pos_traj = np.load (os.path.join(self.env_root,'init','pos.npy'))
         orn_traj = np.load (os.path.join(self.env_root,'init','orn.npy'))
@@ -367,7 +348,24 @@ class Engine:
 
     def init_dmp(self):
         if self.opt.use_dmp and self.opt.dmp_imitation:
-            dmp_imitation_data = self.dmp_imitation ()
+            trajectories = []
+            for file in os.listdir (self.opt.actions_root):
+                action_id = int (file.split ('-')[0])
+                video_id = int (file.split('-')[1])
+                if (action_id == self.opt.action_id) and (video_id==self.opt.video_id):
+                    self.now_data_q = np.load (os.path.join (self.opt.actions_root, file, 'q.npy'))
+                    pos_traj, orn_traj = [], []
+                    for i in range (self.now_data_q.shape[0]):
+                        poses = self.now_data_q[i]
+                        for j in range (7):
+                            p.resetJointState (self.kukaId, j, poses[j], self.now_data_q[i][j])
+                        state = p.getLinkState (self.kukaId, 7)
+                        pos = state[0]
+                        orn = state[1]
+                        pos_traj.append (pos)
+                        orn_traj.append (orn)
+                    trajectories.append (np.array (pos_traj))
+            dmp_imitation_data = np.array (trajectories)
             self.dmp.imitate (dmp_imitation_data)
 
     def reset(self):
@@ -479,7 +477,7 @@ class Engine:
                                                        lowerLimits=self.ll,
                                                        upperLimits=self.ul,
                                                        jointRanges=self.jr,
-                                                       # restPoses=self.data_q[i],
+                                                       restPoses=self.now_data_q[0],
                                                        jointDamping=self.jd)[:self.num_controlled_joints]
 
             p.setJointMotorControlArray (bodyIndex=self.kukaId,

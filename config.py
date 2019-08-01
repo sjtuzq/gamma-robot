@@ -51,14 +51,14 @@ parser.add_argument('--print_log', default=5, type=int)
 # environment part hyper parameters
 parser.add_argument('--project_root',  default='/scr1/system/gamma-robot/', type=str) # project root path
 # parser.add_argument('--project_root',  default='/juno/u/qiangzhang/system/gamma-robot/', type=str) # project root path
-parser.add_argument('--test_id',  default=1092, type=int) #  1000+ means debug
-parser.add_argument('--gui',  default=True, type=int) #
-parser.add_argument('--video_id',  default=0, type=int) #
+parser.add_argument('--test_id',  default=94, type=int) #  1000+ means debug
+parser.add_argument('--gui',  default=False, type=int) #
+parser.add_argument('--video_id',  default=6, type=int) #
 
 parser.add_argument('--object_id',  default='nut', type=str) #
 parser.add_argument('--observation',  default='before_cnn', type=str) # after_cnn or joint_pose or end_pos or before_cnn or others
 parser.add_argument('--view_point',  default='first', type=str) # first or third
-parser.add_argument('--rand_start',  default='rand', type=str) # rand or two or others
+parser.add_argument('--rand_start',  default='fixed', type=str) # rand or two or others
 parser.add_argument('--rand_box',  default='fixed', type=str) # rand or two or others
 
 parser.add_argument('--axis_limit_x',  default='[0.04,0.6]', type=str) #
@@ -79,7 +79,7 @@ parser.add_argument('--each_action_lim',  default=0.03, type=float) #
 
 
 # video prediction part hyper parameters
-parser.add_argument('--action_id',  default=45, type=int) #
+parser.add_argument('--action_id',  default=107, type=int) #
 parser.add_argument('--cut_frame_num',  default=20, type=int) #
 parser.add_argument('--give_reward_num',  default=1, type=int) #
 parser.add_argument('--video_reward',  default=True, type=int) #
@@ -93,8 +93,8 @@ parser.add_argument('--prob_softmax',  default=False, type=int) #
 # environment action part hyperparameters
 parser.add_argument('--use_dmp',  default=True, type=int) #
 parser.add_argument('--load_dmp', default=None, type=object) #
-parser.add_argument('--dmp_ratio', default=0.6, type=float) #
-parser.add_argument('--dmp_num', default=28, type=float) #
+parser.add_argument('--dmp_ratio', default=0.5, type=float) #
+parser.add_argument('--dmp_num', default=20, type=float) #
 parser.add_argument('--dmp_imitation', default=True, type=int) #
 parser.add_argument('--actions_root', default='/scr1/system/beta-robot/dataset/actions', type=str) #
 
