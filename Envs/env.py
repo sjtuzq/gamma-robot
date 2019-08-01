@@ -83,11 +83,13 @@ class Engine:
         # ik_solver
         self.ik_solver = p.IK_DLS
         # lower limits for null space
-        self.ll = [-.967, -2, -2.96, 0.19, -2.96, -2.09, -3.05]
+        self.ll = [-2.9671, -1.8326, -2.9671, -3.1416, -2.9671, -0.0873, -2.9671, -0.0001, -0.0001, -0.0001, 0.0, 0.0,
+                   -3.14, -3.14, 0.0, 0.0, 0.0, 0.0, -0.0001, -0.0001]
         # upper limits for null space
-        self.ul = [.967, 2, 2.96, 2.29, 2.96, 2.09, 3.05]
+        self.ul = [2.9671, 1.8326, -2.9671, 0.0, 2.9671, 3.8223, 2.9671, 0.0001, 0.0001, 0.0001, 0.81, 0.81, 3.14, 3.14,
+                   0.8757, 0.8757, -0.8, -0.8, 0.0001, 0.0001]
         # joint ranges for null space
-        self.jr = [5.8, 4, 5.8, 4, 5.8, 4, 6]
+        self.jr = [(u - l) for (u, l) in zip (self.ul, self.ll)]
         # restposes for null space
         self.rp = [0, 0, 0, 0.5 * math.pi, 0, -math.pi * 0.5 * 0.66, 0]
         # joint damping coefficents
@@ -117,7 +119,19 @@ class Engine:
             if jointIndex in self.activeGripperJointIndexList:
                 self.gripperLowerLimitList.append (jointInfo[8])
                 self.gripperUpperLimitList.append (jointInfo[9])
-        self.gripperForce = 15
+
+        self.gripper_left_tip_index = 13  # 14
+        self.gripper_right_tip_index = 17  # 16
+        self.gripperForce = 1000
+
+        friction_ceof = 1000.0
+        p.changeDynamics (self.kukaId, self.gripper_left_tip_index, lateralFriction=friction_ceof)
+        p.changeDynamics (self.kukaId, self.gripper_left_tip_index, rollingFriction=friction_ceof)
+        p.changeDynamics (self.kukaId, self.gripper_left_tip_index, spinningFriction=friction_ceof)
+
+        p.changeDynamics (self.kukaId, self.gripper_right_tip_index, lateralFriction=friction_ceof)
+        p.changeDynamics (self.kukaId, self.gripper_right_tip_index, rollingFriction=friction_ceof)
+        p.changeDynamics (self.kukaId, self.gripper_left_tip_index, spinningFriction=friction_ceof)
 
     def save_video(self,img_info,i):
         img = img_info[2][:, :, :3]
@@ -278,9 +292,9 @@ class Engine:
             pos = pos_traj[i]
             orn = orn_traj[i]
             jointPoses = p.calculateInverseKinematics(self.kukaId, self.kukaEndEffectorIndex, pos, orn,
-                                                      # lowerLimits=self.ll,
-                                                      # upperLimits=self.ul,
-                                                      # jointRanges=self.jr,
+                                                      lowerLimits=self.ll,
+                                                      upperLimits=self.ul,
+                                                      jointRanges=self.jr,
                                                       restPoses=self.data_q[i],
                                                       jointDamping=self.jd)[:self.num_controlled_joints]
 
@@ -405,9 +419,9 @@ class Engine:
         execute_stage_time = 20
         for execute_t in range(execute_stage_time):
             jointPoses = p.calculateInverseKinematics (self.kukaId, self.kukaEndEffectorIndex, pos, orn,
-                                                       # lowerLimits=self.ll,
-                                                       # upperLimits=self.ul,
-                                                       # jointRanges=self.jr,
+                                                       lowerLimits=self.ll,
+                                                       upperLimits=self.ul,
+                                                       jointRanges=self.jr,
                                                        # restPoses=self.data_q[i],
                                                        jointDamping=self.jd)[:self.num_controlled_joints]
 

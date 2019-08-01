@@ -151,9 +151,9 @@ class Engine107(Engine):
         # reward = (self.last_aabb_dist-aabb_dist)*100
         if (self.opt.test_id==86 or self.opt.test_id==87):
             self.last_aabb_dist_storage[(self.seq_num)%20] = aabb_dist
-            self.last_aabb_dist = self.last_aabb_dist_storage[(self.seq_num-1)%20]
-            if self.opt.test_id==86 and self.seq_num<20:
-                self.last_aabb_dist = self.last_aabb_dist_storage[0]
+            self.last_aabb_dist = self.last_aabb_dist_storage[(self.seq_num+1)%20]
+            # if self.opt.test_id==86 and self.seq_num<20:
+            #     self.last_aabb_dist = self.last_aabb_dist_storage[0]
         else:
             self.last_aabb_dist = aabb_dist
 
@@ -191,8 +191,6 @@ class Engine107(Engine):
 
         if (self.opt.test_id==85 or self.opt.test_id==87) and self.seq_num<=19:
             reward = 0
-
-
 
         # reward = -1
         self.info += 'reward: {}\n\n'.format (reward)

@@ -46,10 +46,14 @@ parser.add_argument('--print_log', default=5, type=int)
 
 
 
+
+
+
+
 # environment part hyper parameters
 parser.add_argument('--project_root',  default='/scr1/system/gamma-robot/', type=str) # project root path
 # parser.add_argument('--project_root',  default='/juno/u/qiangzhang/system/gamma-robot/', type=str) # project root path
-parser.add_argument('--test_id',  default=85, type=int) #  1000+ means debug
+parser.add_argument('--test_id',  default=1200, type=int) #  1000+ means debug
 parser.add_argument('--gui',  default=False, type=int) #
 parser.add_argument('--video_id',  default=0, type=int) #
 
@@ -74,12 +78,23 @@ parser.add_argument('--end_distance',  default=0.20, type=float) #
 parser.add_argument('--each_action_lim',  default=0.03, type=float) #
 
 
+
+
+
+
 # video prediction part hyper parameters
 parser.add_argument('--action_id',  default=107, type=int) #
 parser.add_argument('--cut_frame_num',  default=20, type=int) #
 parser.add_argument('--give_reward_num',  default=1, type=int) #
 parser.add_argument('--video_reward',  default=False, type=int) #
 parser.add_argument('--add_mask',  default=True, type=int) #
+
+
+
+
+# environment action part hyperparameters
+parser.add_argument('--use_dmp',  default=True, type=int) #
+parser.add_argument('--load_dmp', default=None, type=object) #
 
 
 opt = parser.parse_args()
