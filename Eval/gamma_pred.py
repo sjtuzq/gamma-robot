@@ -13,7 +13,7 @@ def safe_path(path):
     return path
 
 class Frame_eval:
-    def __init__(self,img_path=None,frame_len=20,start_id=0,memory_path=None,class_label=45):
+    def __init__(self,img_path=None,frame_len=20,start_id=0,memory_path=None,class_label=45,opt=None):
         self.img_path = img_path
         self.frame_len = frame_len
         self.start_id = start_id
@@ -22,6 +22,7 @@ class Frame_eval:
         self.video_path = safe_path(os.path.join(self.memory_path,'videos'))
         self.video_id = len(os.listdir(self.video_path))+1
         self.tmp_dir = safe_path(os.path.join(self.video_path,'{}'.format(self.video_id)))
+        self.opt = opt
 
     def update(self,img_path=None,start_id=0):
         if img_path is not None:
@@ -46,7 +47,7 @@ class Frame_eval:
         self.result_file = os.path.join(self.memory_path,'result.txt')
 
     def eval(self):
-        prob,pred = get_pred(self.video_path,self.caption_file)
+        prob,pred = get_pred(self.video_path,self.caption_file,self.opt)
         prob = prob[0]
 
         # using softmax

@@ -10,6 +10,14 @@
           <option name="port" value="22" />
         </fileTransfer>
       </webServer>
+      <webServer id="b03b7b94-2d26-4af4-b3a0-7378f9dcef9e" name="bohg-ws-9" url="http://bohg-ws-9">
+        <fileTransfer host="bohg-ws-9" port="22" rootFolder="/scr1/workspace" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
     </option>
   </component>
 </project>

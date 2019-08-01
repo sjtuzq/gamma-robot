@@ -2,6 +2,13 @@
 <project version="4">
   <component name="PublishConfigData" serverName="stanford-sc">
     <serverData>
+      <paths name="bohg-ws-9">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/system/gamma-robot/scripts" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="stanford-sc">
         <serverdata>
           <mappings>

@@ -370,6 +370,16 @@ class Engine:
                                      flags=p.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX,
                                      renderer=p.ER_TINY_RENDERER)
         observation = img_info[2][:, :, :3]
+
+        if self.opt.add_mask:
+            mask = (img_info[4] > 10000000)
+            mask_id_label = [234881025, 301989889, 285212673, 268435457, 318767105, 335544321, 201326593, 218103809,
+                             167772161]
+            for item in mask_id_label:
+                mask = mask * (img_info[4] != item)
+            observation = cv2.cvtColor (observation, cv2.COLOR_RGB2BGR)
+            observation[mask] = [127, 151, 182]
+
         if self.opt.observation == 'after_cnn':
             observation = self.cnn(torch.tensor(observation).unsqueeze(0).transpose(1,3).float()).squeeze().data.numpy()
         elif self.opt.observation == 'joint_pose':
@@ -421,6 +431,16 @@ class Engine:
                                      flags=p.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX,
                                      renderer=p.ER_TINY_RENDERER)
         img = img_info[2][:, :, :3]
+
+        if self.opt.add_mask:
+            mask = (img_info[4] > 10000000)
+            mask_id_label = [234881025, 301989889, 285212673, 268435457, 318767105, 335544321, 201326593, 218103809,
+                             167772161]
+            for item in mask_id_label:
+                mask = mask * (img_info[4] != item)
+            img = cv2.cvtColor (img, cv2.COLOR_RGB2BGR)
+            img[mask] = [127, 151, 182]
+
         cv2.imwrite (os.path.join (self.log_path, '{:06d}.jpg'.format (self.seq_num - 1)), img)
         self.observation = img
         if self.opt.observation == 'after_cnn':

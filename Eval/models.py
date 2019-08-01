@@ -11,7 +11,7 @@ class TSN(nn.Module):
                  base_model='resnet101', new_length=None,
                  consensus_type='avg', before_softmax=True,
                  dropout=0.8,img_feature_dim=256,
-                 crop_num=1, partial_bn=True, print_spec=True):
+                 crop_num=1, partial_bn=True, print_spec=True,opt=None):
         super(TSN, self).__init__()
         self.modality = modality
         self.num_segments = num_segments
@@ -40,7 +40,7 @@ class TSN(nn.Module):
         img_feature_dim:    {}
             """.format(base_model, self.modality, self.num_segments, self.new_length, consensus_type, self.dropout, self.img_feature_dim)))
 
-        self._prepare_base_model(base_model)
+        self._prepare_base_model(base_model,opt)
 
         feature_dim = self._prepare_tsn(num_class)
 
@@ -88,7 +88,7 @@ class TSN(nn.Module):
             constant(self.new_fc.bias, 0)
         return feature_dim
 
-    def _prepare_base_model(self, base_model):
+    def _prepare_base_model(self, base_model,opt):
 
         if 'resnet' in base_model or 'vgg' in base_model:
             self.base_model = getattr(torchvision.models, base_model)(True)

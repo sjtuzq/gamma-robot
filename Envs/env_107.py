@@ -97,15 +97,14 @@ class Engine107(Engine):
 
         if self.opt.rand_box == 'rand':
             self.box_file = os.path.join(self.env_root,"urdf/objmodels/urdfs/cup.urdf")
-            self.box_position = [0.45+(random.random()-0.5)*0.2, -0.18+(random.random()-0.5)*0.4, 0.34]
+            self.box_position = [0.37+(random.random()-0.5)*0.2, 0.03+(random.random()-0.5)*0.3, 0.34]
             self.box_orientation = p.getQuaternionFromEuler([-math.pi/2, 0, 0])
             self.box_scaling = 0.21
             self.box_id = p.loadURDF(fileName=self.box_file, basePosition=self.box_position,baseOrientation=self.box_orientation,
                                      globalScaling=self.box_scaling,physicsClientId=self.physical_id)
-
         else:
             self.box_file = os.path.join(self.env_root,"urdf/objmodels/urdfs/cup.urdf")
-            self.box_position = [0.45, -0.18, 0.34]
+            self.box_position = [0.37, 0.03, 0.34]
             self.box_orientation = p.getQuaternionFromEuler([-math.pi/2, 0, 0])
             self.box_scaling = 0.21
             self.box_id = p.loadURDF(fileName=self.box_file, basePosition=self.box_position,baseOrientation=self.box_orientation,
@@ -123,6 +122,7 @@ class Engine107(Engine):
         obj = p.getAABB (self.obj_id, -1)
         obj_center = [(x + y) * 0.5 for x, y in zip (obj[0], obj[1])]
         self.last_aabb_dist = sum ([(x - y) ** 2 for x, y in zip (box_center, obj_center)]) ** 0.5
+        self.last_aabb_dist_storage = [self.last_aabb_dist]*20
 
     def get_reward (self):
         distance = sum ([(x - y) ** 2 for x, y in zip (self.start_pos, self.target_pos)]) ** 0.5
@@ -137,7 +137,7 @@ class Engine107(Engine):
                     and self.seq_num>=self.opt.cut_frame_num:
                 self.eval.get_caption()
                 rank,probability = self.eval.eval()
-                reward = probability - 1
+                reward = probability
                 self.info += 'rank: {}\n'.format(rank)
                 self.eval.update(img_path=self.log_path,start_id=self.seq_num-1-self.opt.cut_frame_num)
             else:
@@ -149,7 +149,13 @@ class Engine107(Engine):
                 reward = (0.5-aabb_dist)*100
 
         # reward = (self.last_aabb_dist-aabb_dist)*100
-        self.last_aabb_dist = aabb_dist
+        if (self.opt.test_id==86 or self.opt.test_id==87):
+            self.last_aabb_dist_storage[(self.seq_num)%20] = aabb_dist
+            self.last_aabb_dist = self.last_aabb_dist_storage[(self.seq_num-1)%20]
+            if self.opt.test_id==86 and self.seq_num<20:
+                self.last_aabb_dist = self.last_aabb_dist_storage[0]
+        else:
+            self.last_aabb_dist = aabb_dist
 
         # calculate whether it is done
         self.info += 'now distance:{}\n'.format (distance)
@@ -161,23 +167,32 @@ class Engine107(Engine):
         else:
             done = False
 
+        # check whether the object are out of order
         for axis_dim in range (3):
             if self.start_pos[axis_dim] < self.axis_limit[axis_dim][0] or \
                     self.start_pos[axis_dim] > self.axis_limit[axis_dim][1]:
                 done = True
                 reward = self.opt.out_reward
 
+        # check whether the object is still in the gripper
         left_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 13, -1)
         right_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 17, -1)
-
         if self.opt.obj_away_loss:
-            if len (left_closet_info)==0 and len (right_closet_info)==0:
+            if len (left_closet_info) == 0 and len (right_closet_info) == 0:
                 done = True
-                reward = self.opt.away_reward
+                # let the model learn the reward automatically, so delete the following line
+                # reward = self.opt.away_reward
 
-        if aabb_dist<self.opt.end_distance and (not self.opt.video_reward):
+        # if aabb_dist<self.opt.end_distance and abs(max(box[0][2],box[1][2])-min(obj[0][2],obj[1][2]))<0.05:
+        if aabb_dist<self.opt.end_distance:
             done = True
-            reward = 100
+            if (not self.opt.video_reward):
+                reward = 100
+
+        if (self.opt.test_id==85 or self.opt.test_id==87) and self.seq_num<=19:
+            reward = 0
+
+
 
         # reward = -1
         self.info += 'reward: {}\n\n'.format (reward)

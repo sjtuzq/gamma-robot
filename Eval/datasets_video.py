@@ -99,7 +99,7 @@ def return_moments(modality):
     return filename_categories, filename_imglist_train, filename_imglist_val, root_data, prefix
 
 
-def return_dataset(dataset, modality):
+def return_dataset(dataset, modality,opt):
     dict_single = {'jester': return_jester, 'something': return_something, 'somethingv2': return_somethingv2,
                    'charades': return_charades, 'moments': return_moments}
     if dataset in dict_single:
@@ -107,9 +107,12 @@ def return_dataset(dataset, modality):
     else:
         raise ValueError('Unknown dataset '+dataset)
 
+    ROOT_DATASET = os.path.join(opt.project_root,'scripts','Eval')
+
     file_imglist_train = os.path.join(ROOT_DATASET, file_imglist_train)
     file_imglist_val = os.path.join(ROOT_DATASET, file_imglist_val)
     file_categories = os.path.join(ROOT_DATASET, file_categories)
+
     with open(file_categories) as f:
         lines = f.readlines()
     categories = [item.rstrip() for item in lines]

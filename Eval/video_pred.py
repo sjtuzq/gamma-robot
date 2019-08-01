@@ -14,7 +14,7 @@ import pdb
 from torch.nn import functional as F
 import os
 
-def get_pred(video_path,caption_path):
+def get_pred(video_path,caption_path,opt):
     # options
     parser = argparse.ArgumentParser(
         description="TRN testing on the full validation set")
@@ -52,19 +52,20 @@ def get_pred(video_path,caption_path):
         pred = pred.t().data.numpy().squeeze()
         return prob,pred
 
-    categories, args.train_list, args.val_list, args.root_path, prefix = datasets_video.return_dataset(args.dataset, args.modality)
+    categories, args.train_list, args.val_list, args.root_path, prefix = datasets_video.return_dataset(args.dataset, args.modality,opt)
     num_class = len(categories)
 
     net = TSN(num_class, args.test_segments if args.crop_fusion_type in ['TRN','TRNmultiscale'] else 1, args.modality,
               base_model=args.arch,
               consensus_type=args.crop_fusion_type,
               img_feature_dim=args.img_feature_dim,
+              opt = opt
               )
 
     try:
         checkpoint = torch.load(args.weights)
     except:
-        args.weights = os.path.join('/scr1/system/beta-robot/scripts/environment/Eval/',args.weights)
+        args.weights = os.path.join(opt.project_root,'scripts/Eval/',args.weights)
         checkpoint = torch.load (args.weights)
 
     print("model epoch {} best prec@1: {}".format(checkpoint['epoch'], checkpoint['best_prec1']))

@@ -113,8 +113,8 @@ class Engine106(Engine):
         texture_path = os.path.join(self.env_root,'texture/sun_textures')
         texture_file = os.path.join (texture_path, random.sample (os.listdir (texture_path), 1)[0])
         textid = p.loadTexture (texture_file)
-        p.changeVisualShape (self.plane_id, -1, rgbaColor=[1, 1, 1, 0.9])
-        # p.changeVisualShape (self.box_id, -1, textureUniqueId=textid)
+        p.changeVisualShape (self.box_id, -1, rgbaColor=[1, 1, 1, 0.9])
+        p.changeVisualShape (self.box_id, -1, textureUniqueId=textid)
         self.start_pos = p.getLinkState (self.kukaId, 7)[0]
 
         box = p.getAABB (self.box_id, -1)
@@ -136,7 +136,7 @@ class Engine106(Engine):
                     and self.seq_num>=self.opt.cut_frame_num:
                 self.eval.get_caption()
                 rank,probability = self.eval.eval()
-                reward = probability - 1
+                reward = probability
                 self.info += 'rank: {}\n'.format(rank)
                 self.eval.update(img_path=self.log_path,start_id=self.seq_num-1-self.opt.cut_frame_num)
             else:

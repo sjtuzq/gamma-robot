@@ -24,11 +24,11 @@ def main ():
         if not os.path.exists(test_path):
             os.mkdir(test_path)
         evaluator = Frame_eval (img_path=os.path.join (opt.project_root, 'logs/td3_log/test{}'.format (opt.test_id), 'epoch-0'),
-                           frame_len=opt.cut_frame_num,
-                           start_id=0,
-                           memory_path=os.path.join (opt.project_root, 'logs/td3_log/test{}'.format (opt.test_id),
-                                                     'memory'),
-                           class_label=opt.action_id)
+                               frame_len=opt.cut_frame_num,
+                               start_id=0,
+                               memory_path=os.path.join (opt.project_root, 'logs/td3_log/test{}'.format (opt.test_id), 'memory'),
+                               class_label=opt.action_id,
+                               opt = opt)
         env = eval('Engine{} (opt, evaluator)'.format(opt.action_id))
     else:
         env = eval('Engine{} (opt)'.format(opt.action_id))
