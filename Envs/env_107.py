@@ -171,11 +171,11 @@ class Engine107(Engine):
             done = False
 
         # check whether the object are out of order
-        for axis_dim in range (3):
-            if self.start_pos[axis_dim] < self.axis_limit[axis_dim][0] or \
-                    self.start_pos[axis_dim] > self.axis_limit[axis_dim][1]:
-                done = True
-                reward = self.opt.out_reward
+        # for axis_dim in range (3):
+        #     if self.start_pos[axis_dim] < self.axis_limit[axis_dim][0] or \
+        #             self.start_pos[axis_dim] > self.axis_limit[axis_dim][1]:
+        #         done = True
+        #         reward = self.opt.out_reward
 
         # check whether the object is still in the gripper
         left_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 13, -1)
@@ -187,10 +187,10 @@ class Engine107(Engine):
                 # reward = self.opt.away_reward
 
         # if aabb_dist<self.opt.end_distance and abs(max(box[0][2],box[1][2])-min(obj[0][2],obj[1][2]))<0.05:
-        if aabb_dist<self.opt.end_distance:
-            done = True
-            if (not self.opt.video_reward):
-                reward = 100
+        # if aabb_dist<self.opt.end_distance:
+        #     done = True
+        #     if (not self.opt.video_reward):
+        #         reward = 100
 
         # if (self.opt.test_id==85 or self.opt.test_id==87) and self.seq_num<=19:
         #     reward = 0
