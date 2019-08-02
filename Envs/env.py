@@ -40,7 +40,8 @@ class Engine:
             self.dmp = self.opt.load_dmp
             assert (self.opt.video_reward)
 
-        self.dataset_root = os.path.join(opt.project_root,'dataset')
+        # self.dataset_root = os.path.join(opt.project_root,'dataset')
+        self.dataset_root = self.opt.actions_root.replace('/actions','')
         self.log_root = os.path.join(opt.project_root,'logs')
         self.log_root = safe_path(self.log_root+'/td3_log/test{}'.format(self.test_id))
 
