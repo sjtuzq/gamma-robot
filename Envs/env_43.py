@@ -27,9 +27,9 @@ egl = pkgutil.get_loader ('eglRenderer')
 
 from .env import Engine
 
-class Engine45(Engine):
+class Engine43(Engine):
     def __init__(self,opt):
-        super(Engine45,self).__init__(opt)
+        super(Engine43,self).__init__(opt)
 
     def init_grasp(self):
         pos_traj = np.load (os.path.join (self.env_root, 'init', 'pos.npy'))
@@ -66,7 +66,7 @@ class Engine45(Engine):
             start_id += 1
 
         pos = p.getLinkState (self.kukaId, 7)[0]
-        up_traj = point2traj([pos, [pos[0]-0.1, pos[1]+0.08, pos[2]+0.1]])
+        up_traj = point2traj([pos, [pos[0]-0.1, pos[1]+0.08, pos[2]+0.3]])
         start_id = self.core(up_traj, orn_traj,start_id)
 
         self.start_pos = p.getLinkState (self.kukaId, 7)[0]
@@ -86,7 +86,8 @@ class Engine45(Engine):
                     self.cycle.image_transfer(self.epoch_num)
                 self.eval.get_caption()
                 rank,probability = self.eval.eval()
-                reward = probability
+                # reward = probability
+                reward = probability - 5
                 self.info += 'rank: {}\n'.format(rank)
                 self.eval.update(img_path=self.log_path,start_id=self.seq_num-1-self.opt.cut_frame_num)
             else:

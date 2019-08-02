@@ -485,7 +485,7 @@ class Engine:
                                                        lowerLimits=self.ll,
                                                        upperLimits=self.ul,
                                                        jointRanges=self.jr,
-                                                       restPoses=self.now_data_q[0],
+                                                       # restPoses=self.now_data_q[0],
                                                        jointDamping=self.jd)[:self.num_controlled_joints]
 
             p.setJointMotorControlArray (bodyIndex=self.kukaId,
