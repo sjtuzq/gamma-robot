@@ -24,7 +24,6 @@ egl = pkgutil.get_loader ('eglRenderer')
 
 class Engine:
     def __init__(self,opt):
-
         self.opt = opt
         self.class_id = opt.action_id
         self.video_id = opt.video_id
@@ -36,12 +35,15 @@ class Engine:
         if self.opt.video_reward:
             self.eval = self.opt.load_video_pred
 
+        if self.opt.use_cycle:
+            self.cycle = self.opt.load_cycle
+
         if self.opt.use_dmp:
             self.dmp = self.opt.load_dmp
             assert (self.opt.video_reward)
 
-        # self.dataset_root = os.path.join(opt.project_root,'dataset')
-        self.dataset_root = self.opt.actions_root.replace('/actions','')
+        self.dataset_root = os.path.join(opt.project_root,'dataset')
+        # self.dataset_root = self.opt.actions_root.replace('/actions','')
         self.log_root = os.path.join(opt.project_root,'logs')
         self.log_root = safe_path(self.log_root+'/td3_log/test{}'.format(self.test_id))
 
@@ -451,7 +453,12 @@ class Engine:
 
         dmp_observations = []
         for small_action in self.traj:
-            small_observation = self.step_without_dmp(small_action)
+            # if out of range, then stop the motion
+            for axis_dim in range (3):
+                if self.start_pos[axis_dim] < self.axis_limit[axis_dim][0] or \
+                        self.start_pos[axis_dim] > self.axis_limit[axis_dim][1]:
+                    small_action = np.array([0,0,0])
+            small_observation = self.step_without_dmp (small_action)
             dmp_observations.append(small_observation)
 
         self.observation = dmp_observations[0][0]

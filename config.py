@@ -51,7 +51,7 @@ parser.add_argument('--print_log', default=5, type=int)
 # environment part hyper parameters
 parser.add_argument('--project_root',  default='/scr1/system/gamma-robot/', type=str) # project root path
 # parser.add_argument('--project_root',  default='/juno/u/qiangzhang/system/gamma-robot/', type=str) # project root path
-parser.add_argument('--test_id',  default=94, type=int) #  1000+ means debug
+parser.add_argument('--test_id',  default=1300, type=int) #  1000+ means debug
 parser.add_argument('--gui',  default=False, type=int) #
 parser.add_argument('--video_id',  default=6, type=int) #
 
@@ -90,13 +90,21 @@ parser.add_argument('--prob_softmax',  default=False, type=int) #
 
 
 
-# environment action part hyperparameters
+# environment action using DMP part hyperparameters
 parser.add_argument('--use_dmp',  default=True, type=int) #
 parser.add_argument('--load_dmp', default=None, type=object) #
 parser.add_argument('--dmp_ratio', default=0.5, type=float) #
-parser.add_argument('--dmp_num', default=20, type=float) #
+parser.add_argument('--dmp_num', default=40, type=float) #
 parser.add_argument('--dmp_imitation', default=True, type=int) #
 parser.add_argument('--actions_root', default='/scr1/system/beta-robot/dataset/actions', type=str) #
+
+
+
+
+# environment action using DMP part hyperparameters
+parser.add_argument('--use_cycle',  default=True, type=int) #
+parser.add_argument('--load_cycle', default=None, type=object) #
+
 
 
 opt = parser.parse_args()

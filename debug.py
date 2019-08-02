@@ -1,7 +1,5 @@
 """
-    function: debug the module of DMP
-    author: qiangzhang
-    time: 8-1-2019
+    debug the module of cycle-gan
 """
 
 import os
@@ -13,9 +11,13 @@ import matplotlib.pyplot as plt
 sys.path.append('./Eval')
 sys.path.append('./Envs')
 sys.path.append('./Dmp')
+sys.path.append('./Cycle')
+
 
 from Dmp.gamma_dmp import DMP
 from Eval.gamma_pred import Frame_eval
+from Cycle.gamma_transfer import Frame_transfer
+
 from Envs.env_107 import Engine107
 from Envs.env_106 import Engine106
 from Envs.env_45 import Engine45
@@ -26,6 +28,9 @@ from config import opt,device
 
 
 def main ():
+    if opt.use_cycle:
+        opt.load_cycle = Frame_transfer (opt)
+
     if opt.use_dmp:
         opt.load_dmp = DMP(opt)
         opt.each_action_lim = opt.each_action_lim*opt.cut_frame_num*opt.dmp_ratio

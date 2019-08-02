@@ -159,11 +159,11 @@ class Engine106(Engine):
             done = False
 
         # check whether the object are out of order
-        for axis_dim in range (3):
-            if self.start_pos[axis_dim] < self.axis_limit[axis_dim][0] or \
-                    self.start_pos[axis_dim] > self.axis_limit[axis_dim][1]:
-                done = True
-                reward = self.opt.out_reward
+        # for axis_dim in range (3):
+        #     if self.start_pos[axis_dim] < self.axis_limit[axis_dim][0] or \
+        #             self.start_pos[axis_dim] > self.axis_limit[axis_dim][1]:
+        #         done = True
+        #         reward = self.opt.out_reward
 
         # check whether the object is still in the gripper
         left_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 13, -1)
@@ -175,16 +175,16 @@ class Engine106(Engine):
                 # reward = self.opt.away_reward
 
         # check whether the object is put into the box
-        check = [0, 0, 0]
-        for axis_dim in range (3):
-            lower = min (box[0][axis_dim], box[1][axis_dim])
-            upper = max (box[0][axis_dim], box[1][axis_dim])
-            if obj_center[axis_dim] >= lower and obj_center[axis_dim] <= upper:
-                check[axis_dim] = 1
-        if sum (check) == 3:
-            done = True
-            if not self.opt.video_reward:
-                reward = 100
+        # check = [0, 0, 0]
+        # for axis_dim in range (3):
+        #     lower = min (box[0][axis_dim], box[1][axis_dim])
+        #     upper = max (box[0][axis_dim], box[1][axis_dim])
+        #     if obj_center[axis_dim] >= lower and obj_center[axis_dim] <= upper:
+        #         check[axis_dim] = 1
+        # if sum (check) == 3:
+        #     done = True
+        #     if not self.opt.video_reward:
+        #         reward = 100
 
 
         self.info += 'reward: {}\n\n'.format (reward)

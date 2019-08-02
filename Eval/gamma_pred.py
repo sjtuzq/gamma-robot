@@ -147,7 +147,8 @@ def check_frames():
 
 
 if __name__ == '__main__':
-    img_path = '/scr1/system/beta-robot/dataset/actions/107-6/frames'
+    # img_path = '/scr1/system/beta-robot/dataset/actions/107-6/frames'
+    img_path = '/scr1/system/gamma-robot/logs/td3_log/test96/epoch-40'
 
     # writer = open('../tmp/test_gap.txt','w')
     # frame_len_list = [10,20,30,40,50,60,70,80,90]

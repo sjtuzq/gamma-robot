@@ -74,6 +74,10 @@ class Engine107(Engine):
         up_traj = point2traj ([pos, t_pos])
         start_id = self.core (up_traj, orn_traj, start_id)
 
+        pos = p.getLinkState (self.kukaId, 7)[0]
+        up_traj = point2traj ([pos, [pos[0], pos[1]+0.25, pos[2]]])
+        start_id = self.core (up_traj, orn_traj, start_id)
+
         if self.opt.rand_start == 'rand':
             # move in z-axis direction
             pos = p.getLinkState (self.kukaId, 7)[0]
@@ -82,7 +86,7 @@ class Engine107(Engine):
 
             # move in y-axis direction
             pos = p.getLinkState (self.kukaId, 7)[0]
-            up_traj = point2traj ([pos, [pos[0], pos[1]+(random.random()-0.5)*0.2+0.2, pos[2]]])
+            up_traj = point2traj ([pos, [pos[0], pos[1]+(random.random()-0.5)*0.2, pos[2]]])
             start_id = self.core (up_traj, orn_traj, start_id)
 
             # move in x-axis direction
@@ -108,6 +112,7 @@ class Engine107(Engine):
         else:
             self.box_file = os.path.join(self.env_root,"urdf/objmodels/urdfs/cup.urdf")
             self.box_position = [0.37, 0.03, 0.34]
+            self.box_position = [0.37, 0.18, 0.34]
             self.box_orientation = p.getQuaternionFromEuler([-math.pi/2, 0, 0])
             self.box_scaling = 0.21
             self.box_id = p.loadURDF(fileName=self.box_file, basePosition=self.box_position,baseOrientation=self.box_orientation,
@@ -138,6 +143,8 @@ class Engine107(Engine):
         if self.opt.video_reward:
             if ((self.seq_num-1)%self.opt.give_reward_num==self.opt.give_reward_num-1) \
                     and self.seq_num>=self.opt.cut_frame_num:
+                if self.opt.use_cycle:
+                    self.cycle.image_transfer(self.epoch_num)
                 self.eval.get_caption()
                 rank,probability = self.eval.eval()
                 reward = probability

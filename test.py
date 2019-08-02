@@ -1,24 +1,35 @@
 """
-function: test Eval
+    function: debug the module of DMP
+    author: qiangzhang
+    time: 8-1-2019
 """
 
 import os
 import sys
 import torch
 import numpy as np
+import matplotlib.pyplot as plt
+
 sys.path.append('./Eval')
 sys.path.append('./Envs')
+sys.path.append('./Dmp')
 
+from Dmp.gamma_dmp import DMP
 from Eval.gamma_pred import Frame_eval
 from Envs.env_107 import Engine107
 from Envs.env_106 import Engine106
-
+from Envs.env_45 import Engine45
 from Solver.TD3 import TD3
 
 from config import opt,device
 
 
+
 def main ():
+    if opt.use_dmp:
+        opt.load_dmp = DMP(opt)
+        opt.each_action_lim = opt.each_action_lim*opt.cut_frame_num*opt.dmp_ratio
+
     if opt.video_reward:
         test_path = os.path.join (opt.project_root, 'logs/td3_log/test{}'.format (opt.test_id))
         if not os.path.exists(test_path):
@@ -29,9 +40,9 @@ def main ():
                                memory_path=os.path.join (opt.project_root, 'logs/td3_log/test{}'.format (opt.test_id), 'memory'),
                                class_label=opt.action_id,
                                opt = opt)
-        env = eval('Engine{} (opt, evaluator)'.format(opt.action_id))
-    else:
-        env = eval('Engine{} (opt)'.format(opt.action_id))
+        opt.load_video_pred = evaluator
+
+    env = eval('Engine{} (opt)'.format(opt.action_id))
 
     state_dim = env.observation_space
     action_dim = len (env.action_space['high'])
@@ -93,3 +104,4 @@ def main ():
 
 if __name__ == '__main__':
     main()
+
