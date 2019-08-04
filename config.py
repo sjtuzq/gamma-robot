@@ -51,7 +51,7 @@ parser.add_argument('--print_log', default=5, type=int)
 # environment part hyper parameters
 parser.add_argument('--project_root',  default='/scr1/system/gamma-robot/', type=str) # project root path
 # parser.add_argument('--project_root',  default='/juno/u/qiangzhang/system/gamma-robot/', type=str) # project root path
-parser.add_argument('--test_id',  default=1113, type=int) #  1000+ means debug
+parser.add_argument('--test_id',  default=1114, type=int) #  1000+ means debug
 parser.add_argument('--gui',  default=False, type=int) #
 parser.add_argument('--video_id',  default=6, type=int) #
 

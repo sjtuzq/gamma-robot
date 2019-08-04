@@ -6,6 +6,8 @@ import argparse
 import torch
 
 from video_pred import get_pred
+from base_eval.base_pred import Base_eval
+
 
 def safe_path(path):
     if not os.path.exists(path):
@@ -23,6 +25,7 @@ class Frame_eval:
         self.video_id = len(os.listdir(self.video_path))+1
         self.tmp_dir = safe_path(os.path.join(self.video_path,'{}'.format(self.video_id)))
         self.opt = opt
+        self.base_eval = Base_eval(self.opt)
 
     def update(self,img_path=None,start_id=0):
         if img_path is not None:
@@ -48,30 +51,32 @@ class Frame_eval:
 
     def eval(self):
         prob,pred = get_pred(self.video_path,self.caption_file,self.opt)
-        prob = prob[0]
+        prob,pred = prob[0],pred[0]
+
+        output, output_index = self.base_eval.get_reward(self.tmp_dir)
 
         # using softmax
         if self.opt.prob_softmax:
             prob = torch.softmax(torch.tensor(prob).float(),0).data.numpy()
             prob = (prob - prob.mean())/np.std(prob)
 
-        rank = np.argwhere (pred[0] == self.class_label).squeeze () + 1
+        rank = np.argwhere (pred == self.class_label).squeeze () + 1
         probability = prob[rank - 1]
 
         # if self.class_label==107 and self.opt.merge_class and self.test_id==101:
         #     propability = 0
         #     # action_list = [104,105,106,107,108,109]
         #     # for action in action_list:
-        #     #     rank_ = np.argwhere (pred[0] == action).squeeze () + 1
+        #     #     rank_ = np.argwhere (pred == action).squeeze () + 1
         #     #     probability += prob[rank_ - 1]
         #
         #     rank_ = np.argwhere (pred[0] == self.class_label).squeeze () + 1
         #     probability = 173./prob[rank_ - 1]
 
         # if self.class_label==86:
-        #     probability = prob[rank - 1] - prob[np.argwhere (pred[0] == 45).squeeze ()]*0.8
+        #     probability = prob[rank - 1] - prob[np.argwhere (pred == 45).squeeze ()]*0.8
         # if self.class_label==94:
-        #     probability = prob[rank - 1] - prob[np.argwhere (pred[0] == 45).squeeze ()]*0.8
+        #     probability = prob[rank - 1] - prob[np.argwhere (pred == 45).squeeze ()]*0.8
 
         return rank,probability
 
@@ -156,21 +161,30 @@ def check_frames():
     #     print (i,rank, probability)
 
 
+
+
+def test_base_eval():
+    agent = Base_eval()
+    filepath = '/scr1/system/beta-robot/dataset/actions/106-2/frames'
+    output,output_index = agent.get_reward (filepath)
+    print(output_index)
+
+
 if __name__ == '__main__':
-    # img_path = '/scr1/system/beta-robot/dataset/actions/107-6/frames'
-    img_path = '/scr1/system/gamma-robot/logs/td3_log/test96/epoch-40'
-
-    # writer = open('../tmp/test_gap.txt','w')
-    # frame_len_list = [10,20,30,40,50,60,70,80,90]
-    # for frame_len in frame_len_list:
-    agent = Frame_eval(img_path=img_path,
-                       frame_len = 60,
-                       start_id = 40,
-                       memory_path = '/scr1/system/beta-robot/dataset/ddpg_log/memory',
-                       class_label=107)
-    agent.update(start_id=0)
-    agent.get_caption()
-    rank,propability = agent.eval()
-    print(rank,propability)
-
+    test_base_eval()
+    # # img_path = '/scr1/system/beta-robot/dataset/actions/107-6/frames'
+    # img_path = '/scr1/system/gamma-robot/logs/td3_log/test96/epoch-40'
+    #
+    # # writer = open('../tmp/test_gap.txt','w')
+    # # frame_len_list = [10,20,30,40,50,60,70,80,90]
+    # # for frame_len in frame_len_list:
+    # agent = Frame_eval(img_path=img_path,
+    #                    frame_len = 60,
+    #                    start_id = 40,
+    #                    memory_path = '/scr1/system/beta-robot/dataset/ddpg_log/memory',
+    #                    class_label=107)
+    # agent.update(start_id=0)
+    # agent.get_caption()
+    # rank,propability = agent.eval()
+    # print(rank,propability)
 
