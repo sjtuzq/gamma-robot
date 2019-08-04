@@ -64,7 +64,7 @@ class Engine106(Engine):
             start_id += 1
 
         pos = p.getLinkState (self.kukaId, 7)[0]
-        up_traj = point2traj([pos, [pos[0], pos[1], pos[2]+0.3]])
+        up_traj = point2traj([pos, [pos[0], pos[1]+0.05, pos[2]+0.3]])
         start_id = self.core(up_traj, orn_traj,start_id)
 
         if self.opt.rand_start == 'rand':
@@ -101,8 +101,8 @@ class Engine106(Engine):
                                       globalScaling=self.box_scaling, physicsClientId=self.physical_id)
         else:
             self.box_file = os.path.join (self.env_root, "urdf/openbox/openbox.urdf")
-            self.box_position = [0.45, -0.1, 0.34]
-            self.box_scaling = 0.0003
+            self.box_position = [0.45, 0.05, 0.34]
+            self.box_scaling = 0.00037
             self.box_orientation = p.getQuaternionFromEuler ([0, 0, 0])
             self.box_id = p.loadURDF (fileName=self.box_file, basePosition=self.box_position,
                                       baseOrientation=self.box_orientation,
@@ -111,8 +111,9 @@ class Engine106(Engine):
         texture_path = os.path.join(self.env_root,'texture/sun_textures')
         texture_file = os.path.join (texture_path, random.sample (os.listdir (texture_path), 1)[0])
         textid = p.loadTexture (texture_file)
-        p.changeVisualShape (self.box_id, -1, rgbaColor=[1, 1, 1, 0.9])
-        p.changeVisualShape (self.box_id, -1, textureUniqueId=textid)
+        # p.changeVisualShape (self.box_id, -1, rgbaColor=[1, 1, 1, 0.9])
+        # p.changeVisualShape (self.box_id, -1, textureUniqueId=textid)
+        p.changeVisualShape (self.box_id, -1, rgbaColor=[1, 0, 0, 1])
         self.start_pos = p.getLinkState (self.kukaId, 7)[0]
 
         box = p.getAABB (self.box_id, -1)
@@ -122,6 +123,54 @@ class Engine106(Engine):
         self.last_aabb_dist = sum ([(x - y) ** 2 for x, y in zip (box_center, obj_center)]) ** 0.5
 
     def get_reward (self):
+        if self.opt.video_reward:
+            return self.get_video_reward()
+        else:
+            return self.get_handcraft_reward()
+
+    def get_video_reward(self):
+        distance = sum ([(x - y) ** 2 for x, y in zip (self.start_pos, self.target_pos)]) ** 0.5
+        box = p.getAABB (self.box_id, -1)
+        box_center = [(x + y) * 0.5 for x, y in zip (box[0], box[1])]
+        obj = p.getAABB (self.obj_id, -1)
+        obj_center = [(x + y) * 0.5 for x, y in zip (obj[0], obj[1])]
+        aabb_dist = sum ([(x - y) ** 2 for x, y in zip (box_center, obj_center)]) ** 0.5
+
+        if ((self.seq_num-1)%self.opt.give_reward_num==self.opt.give_reward_num-1) \
+                and self.seq_num>=self.opt.cut_frame_num:
+            if self.opt.use_cycle:
+                self.cycle.image_transfer(self.epoch_num)
+            self.eval.get_caption()
+            rank,probability = self.eval.eval()
+            reward = probability - 5
+            # reward = probability + 1
+            self.info += 'rank: {}\n'.format(rank)
+            self.eval.update(img_path=self.log_path,start_id=self.seq_num-1-self.opt.cut_frame_num)
+        else:
+            reward = 0
+
+        # calculate whether it is done
+        self.info += 'now distance:{}\n'.format (distance)
+        self.info += 'AABB distance:{}\n'.format (aabb_dist)
+
+        if self.seq_num >= self.max_seq_num:
+            done = True
+        else:
+            done = False
+
+        # check whether the object is still in the gripper
+        left_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 13, -1)
+        right_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 17, -1)
+        if self.opt.obj_away_loss:
+            if len (left_closet_info) == 0 and len (right_closet_info) == 0:
+                done = True
+
+        self.info += 'reward: {}\n\n'.format (reward)
+        self.log_info.write (self.info)
+        print (self.info)
+        return self.observation, reward, done, self.info
+
+    def get_handcraft_reward (self):
         distance = sum ([(x - y) ** 2 for x, y in zip (self.start_pos, self.target_pos)]) ** 0.5
         box = p.getAABB (self.box_id, -1)
         box_center = [(x + y) * 0.5 for x, y in zip (box[0], box[1])]

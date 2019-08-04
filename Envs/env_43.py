@@ -82,13 +82,23 @@ class Engine43(Engine):
         if self.opt.video_reward:
             if ((self.seq_num-1)%self.opt.give_reward_num==self.opt.give_reward_num-1) \
                     and self.seq_num>=self.opt.cut_frame_num:
+
                 if self.opt.use_cycle:
+                    self.eval.get_caption ()
+                    before_rank, before_probability = self.eval.eval ()
                     self.cycle.image_transfer(self.epoch_num)
+
                 self.eval.get_caption()
                 rank,probability = self.eval.eval()
+
                 # reward = probability
                 reward = probability - 5
-                self.info += 'rank: {}\n'.format(rank)
+
+                if self.opt.use_cycle:
+                    self.info += 'before_rank:{}  before_probability:{}\nrank:{}    probability:{}\n'\
+                        .format(before_rank,before_probability,rank,probability)
+
+                # self.info += 'rank: {}\n'.format(rank)
                 self.eval.update(img_path=self.log_path,start_id=self.seq_num-1-self.opt.cut_frame_num)
             else:
                 reward = 0

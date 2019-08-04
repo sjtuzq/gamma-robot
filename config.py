@@ -21,7 +21,7 @@ parser.add_argument('--iteration', default=5, type=int)
 parser.add_argument('--learning_rate', default=0.001, type=float)
 parser.add_argument('--update_time', default=1, type=int)
 parser.add_argument('--gamma', default=0.99, type=int) # discounted factor
-parser.add_argument('--capacity', default=500, type=int) # replay buffer size
+parser.add_argument('--capacity', default=5000, type=int) # replay buffer size
 parser.add_argument('--start_train', default=50, type=int) # replay buffer size
 parser.add_argument('--num_iteration', default=100000, type=int) #  num of  games
 parser.add_argument('--batch_size', default=16, type=int) # mini batch size
@@ -51,7 +51,7 @@ parser.add_argument('--print_log', default=5, type=int)
 # environment part hyper parameters
 parser.add_argument('--project_root',  default='/scr1/system/gamma-robot/', type=str) # project root path
 # parser.add_argument('--project_root',  default='/juno/u/qiangzhang/system/gamma-robot/', type=str) # project root path
-parser.add_argument('--test_id',  default=105, type=int) #  1000+ means debug
+parser.add_argument('--test_id',  default=1113, type=int) #  1000+ means debug
 parser.add_argument('--gui',  default=False, type=int) #
 parser.add_argument('--video_id',  default=6, type=int) #
 
@@ -79,12 +79,12 @@ parser.add_argument('--each_action_lim',  default=0.03, type=float) #
 
 
 # video prediction part hyper parameters
-parser.add_argument('--action_id',  default=43, type=int) #
+parser.add_argument('--action_id',  default=106, type=int) #
 parser.add_argument('--cut_frame_num',  default=20, type=int) #
 parser.add_argument('--give_reward_num',  default=1, type=int) #
 parser.add_argument('--video_reward',  default=True, type=int) #
 parser.add_argument('--load_video_pred',  default=None, type=object) #
-parser.add_argument('--add_mask',  default=False, type=int) #
+parser.add_argument('--add_mask',  default=True, type=int) #
 parser.add_argument('--prob_softmax',  default=False, type=int) #
 parser.add_argument('--merge_class',  default=True, type=int) #
 
@@ -103,7 +103,7 @@ parser.add_argument('--actions_root', default='/scr1/system/beta-robot/dataset/a
 
 
 # environment action using DMP part hyperparameters
-parser.add_argument('--use_cycle',  default=True, type=int) #
+parser.add_argument('--use_cycle',  default=False, type=int) #
 parser.add_argument('--load_cycle', default=None, type=object) #
 
 

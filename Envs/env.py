@@ -43,7 +43,6 @@ class Engine:
             assert (self.opt.video_reward)
 
         self.dataset_root = os.path.join(opt.project_root,'dataset')
-        # self.dataset_root = self.opt.actions_root.replace('/actions','')
         self.log_root = os.path.join(opt.project_root,'logs')
         self.log_root = safe_path(self.log_root+'/td3_log/test{}'.format(self.test_id))
 
@@ -63,10 +62,16 @@ class Engine:
         p.changeVisualShape (self.table_id, -1, textureUniqueId=table_textid)
 
     def init_motion(self):
+        self.data_q = np.load (self.env_root + '/init/q.npy')
+        self.data_dq = np.load (self.env_root + '/init/dq.npy')
+        self.data_gripper = np.load (self.env_root + '/init/gripper.npy')
+
+    def init_running (self):
         self.motion_path = self.dataset_root+'/actions/{}-{}'.format(self.class_id,self.video_id)
         self.data_q = np.load (self.dataset_root+'/actions/{}-{}/q.npy'.format(self.class_id,self.video_id))
         self.data_dq = np.load(self.dataset_root+'/actions/{}-{}/dq.npy'.format(self.class_id,self.video_id))
         self.data_gripper = np.load(self.dataset_root+'/actions/{}-{}/gripper.npy'.format(self.class_id,self.video_id))
+
         self.frames_path = cut_frame(self.dataset_root+'/actions/{}-{}/{}-{}.avi'.format (self.class_id, self.video_id,self.class_id,self.video_id),
                                      self.dataset_root+'/actions/{}-{}/frames'.format (self.class_id, self.video_id))
         self.output_path = safe_path(self.dataset_root+'/actions/{}-{}/simulation_frames'.format(self.class_id,self.video_id))
@@ -424,8 +429,24 @@ class Engine:
                              167772161]
             for item in mask_id_label:
                 mask = mask * (img_info[4] != item)
+
+            box_mask_label = [117440516,234881028,184549380,33554436,167772164,50331652,
+                              134217732,16777220,67108868,150994948,251658244,
+                              234881028,100663300,218103812,83886084,268435460]
+            for item in box_mask_label:
+                mask = mask * (img_info[4] != item)
+
             observation = cv2.cvtColor (observation, cv2.COLOR_RGB2BGR)
             observation[mask] = [127, 151, 182]
+
+            # mask = np.zeros_like (img_info[4])
+            # box_mask_label = [117440516, 234881028, 184549380, 33554436, 167772164, 50331652,
+            #                   134217732, 16777220, 67108868, 150994948, 251658244,
+            #                   234881028, 100663300, 218103812, 83886084, 268435460]
+            # for item in box_mask_label:
+            #     mask = mask + (img_info[4] == item)
+            # mask = (mask > 0)
+            # observation[mask] = [0, 0, 255]
 
         if self.opt.observation == 'after_cnn':
             observation = self.cnn(torch.tensor(observation).unsqueeze(0).transpose(1,3).float()).squeeze().data.numpy()
@@ -485,7 +506,7 @@ class Engine:
                                                        lowerLimits=self.ll,
                                                        upperLimits=self.ul,
                                                        jointRanges=self.jr,
-                                                       # restPoses=self.now_data_q[0],
+                                                       restPoses=self.data_q[0],
                                                        jointDamping=self.jd)[:self.num_controlled_joints]
 
             p.setJointMotorControlArray (bodyIndex=self.kukaId,
@@ -515,8 +536,24 @@ class Engine:
                              167772161]
             for item in mask_id_label:
                 mask = mask * (img_info[4] != item)
+
+            box_mask_label = [117440516,234881028,184549380,33554436,167772164,50331652,
+                              134217732,16777220,67108868,150994948,251658244,
+                              234881028,100663300,218103812,83886084,268435460]
+            for item in box_mask_label:
+                mask = mask * (img_info[4] != item)
+
             img = cv2.cvtColor (img, cv2.COLOR_RGB2BGR)
             img[mask] = [127, 151, 182]
+
+            # mask = np.zeros_like(img_info[4])
+            # box_mask_label = [117440516, 234881028, 184549380, 33554436, 167772164, 50331652,
+            #                   134217732, 16777220, 67108868, 150994948, 251658244,
+            #                   234881028, 100663300, 218103812, 83886084, 268435460]
+            # for item in box_mask_label:
+            #     mask = mask + (img_info[4] == item)
+            # mask = (mask>0)
+            # img[mask] = [0, 0, 255]
 
         cv2.imwrite (os.path.join (self.log_path, '{:06d}.jpg'.format (self.seq_num - 1)), img)
         self.observation = img

@@ -58,12 +58,15 @@ class Frame_eval:
         rank = np.argwhere (pred[0] == self.class_label).squeeze () + 1
         probability = prob[rank - 1]
 
-        # if self.class_label==107 and self.opt.merge_class:
+        # if self.class_label==107 and self.opt.merge_class and self.test_id==101:
         #     propability = 0
-        #     action_list = [104,105,106,107,108,109]
-        #     for action in action_list:
-        #         rank_ = np.argwhere (pred[0] == action).squeeze () + 1
-        #         probability += prob[rank_ - 1]
+        #     # action_list = [104,105,106,107,108,109]
+        #     # for action in action_list:
+        #     #     rank_ = np.argwhere (pred[0] == action).squeeze () + 1
+        #     #     probability += prob[rank_ - 1]
+        #
+        #     rank_ = np.argwhere (pred[0] == self.class_label).squeeze () + 1
+        #     probability = 173./prob[rank_ - 1]
 
         # if self.class_label==86:
         #     probability = prob[rank - 1] - prob[np.argwhere (pred[0] == 45).squeeze ()]*0.8
