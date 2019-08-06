@@ -17,7 +17,6 @@ import sys
 sys.path.append('./Eval')
 sys.path.append('./')
 from .utils import get_view,safe_path,cut_frame,point2traj,get_gripper_pos,backup_code
-from .model import CNN
 
 import pkgutil
 egl = pkgutil.get_loader ('eglRenderer')
@@ -35,7 +34,9 @@ class Engine106(Engine):
         self.fix_orn = np.load (os.path.join (self.env_root, 'init', 'orn.npy'))
 
         for j in range (7):
-            p.resetJointState(self.kukaId, j, self.data_q[0][j], self.data_dq[0][j])
+            self.p.resetJointState(self.robotId, j, self.data_q[0][j], self.data_dq[0][j])
+
+        self.robot.gripperControl(0)
 
         for init_t in range(100):
             box = p.getAABB(self.obj_id,-1)
@@ -48,47 +49,41 @@ class Engine106(Engine):
 
         start_id = 0
         init_traj = point2traj(points)
-        start_id = self.core(init_traj,orn_traj,start_id)
-
-        p.stepSimulation()
+        start_id = self.move(init_traj,orn_traj,start_id)
 
         # grasping
         grasp_stage_num = 10
         for grasp_t in range(grasp_stage_num):
-            # self.gripperPos = get_gripper_pos (1-grasp_t/grasp_stage_num*0.5)
-            self.gripperPos = get_gripper_pos (1-grasp_t/grasp_stage_num*0.7)
-            p.setJointMotorControlArray (bodyIndex=self.kukaId, jointIndices=self.activeGripperJointIndexList,
-                                         controlMode=p.POSITION_CONTROL, targetPositions=self.gripperPos,
-                                         forces=[self.gripperForce] * len (self.activeGripperJointIndexList))
-            p.stepSimulation ()
+            gripperPos = grasp_t / float(grasp_stage_num) * 180.0
+            self.robot.gripperControl(gripperPos)
             start_id += 1
 
-        pos = p.getLinkState (self.kukaId, 7)[0]
+        pos = p.getLinkState (self.robotId, 7)[0]
         up_traj = point2traj([pos, [pos[0], pos[1]+0.05, pos[2]+0.3]])
-        start_id = self.core(up_traj, orn_traj,start_id)
+        start_id = self.move(up_traj, orn_traj,start_id)
 
         if self.opt.rand_start == 'rand':
             # move in z-axis direction
-            pos = p.getLinkState (self.kukaId, 7)[0]
+            pos = p.getLinkState (self.robotId, 7)[0]
             up_traj = point2traj([pos, [pos[0], pos[1], pos[2]+(random.random()-0.5)*0.1]])
-            start_id = self.core(up_traj, orn_traj,start_id)
+            start_id = self.move(up_traj, orn_traj,start_id)
 
             # move in y-axis direction
-            pos = p.getLinkState (self.kukaId, 7)[0]
+            pos = p.getLinkState (self.robotId, 7)[0]
             up_traj = point2traj ([pos, [pos[0], pos[1]+(random.random()-0.5)*0.2+0.2, pos[2]]])
-            start_id = self.core (up_traj, orn_traj, start_id)
+            start_id = self.move (up_traj, orn_traj, start_id)
 
             # move in x-axis direction
-            pos = p.getLinkState (self.kukaId, 7)[0]
+            pos = p.getLinkState (self.robotId, 7)[0]
             up_traj = point2traj ([pos, [pos[0]+(random.random()-0.5)*0.2, pos[1], pos[2]]])
-            start_id = self.core (up_traj, orn_traj, start_id)
+            start_id = self.move (up_traj, orn_traj, start_id)
 
         elif self.opt.rand_start == 'two':
             prob = random.random()
             if prob<0.5:
-                pos = p.getLinkState (self.kukaId, 7)[0]
+                pos = p.getLinkState (self.robotId, 7)[0]
                 up_traj = point2traj ([pos, [pos[0], pos[1] + 0.2, pos[2]]])
-                start_id = self.core (up_traj, orn_traj, start_id)
+                start_id = self.move (up_traj, orn_traj, start_id)
 
 
         if self.opt.rand_box == 'rand':
@@ -98,7 +93,7 @@ class Engine106(Engine):
             self.box_orientation = p.getQuaternionFromEuler ([0, 0, 0])
             self.box_id = p.loadURDF (fileName=self.box_file, basePosition=self.box_position,
                                       baseOrientation=self.box_orientation,
-                                      globalScaling=self.box_scaling, physicsClientId=self.physical_id)
+                                      globalScaling=self.box_scaling)#, physicsClientId=self.physical_id)
         else:
             self.box_file = os.path.join (self.env_root, "urdf/openbox/openbox.urdf")
             self.box_position = [0.45, 0.05, 0.34]
@@ -106,7 +101,7 @@ class Engine106(Engine):
             self.box_orientation = p.getQuaternionFromEuler ([0, 0, 0])
             self.box_id = p.loadURDF (fileName=self.box_file, basePosition=self.box_position,
                                       baseOrientation=self.box_orientation,
-                                      globalScaling=self.box_scaling, physicsClientId=self.physical_id)
+                                      globalScaling=self.box_scaling)#, physicsClientId=self.physical_id)
 
         texture_path = os.path.join(self.env_root,'texture/sun_textures')
         texture_file = os.path.join (texture_path, random.sample (os.listdir (texture_path), 1)[0])
@@ -114,7 +109,7 @@ class Engine106(Engine):
         # p.changeVisualShape (self.box_id, -1, rgbaColor=[1, 1, 1, 0.9])
         # p.changeVisualShape (self.box_id, -1, textureUniqueId=textid)
         p.changeVisualShape (self.box_id, -1, rgbaColor=[1, 0, 0, 1])
-        self.start_pos = p.getLinkState (self.kukaId, 7)[0]
+        self.start_pos = p.getLinkState (self.robotId, 7)[0]
 
         box = p.getAABB (self.box_id, -1)
         box_center = [(x + y) * 0.5 for x, y in zip (box[0], box[1])]
@@ -129,29 +124,17 @@ class Engine106(Engine):
             return self.get_handcraft_reward()
 
     def get_video_reward(self):
-        distance = sum ([(x - y) ** 2 for x, y in zip (self.start_pos, self.target_pos)]) ** 0.5
-        box = p.getAABB (self.box_id, -1)
-        box_center = [(x + y) * 0.5 for x, y in zip (box[0], box[1])]
-        obj = p.getAABB (self.obj_id, -1)
-        obj_center = [(x + y) * 0.5 for x, y in zip (obj[0], obj[1])]
-        aabb_dist = sum ([(x - y) ** 2 for x, y in zip (box_center, obj_center)]) ** 0.5
-
         if ((self.seq_num-1)%self.opt.give_reward_num==self.opt.give_reward_num-1) \
                 and self.seq_num>=self.opt.cut_frame_num:
             if self.opt.use_cycle:
                 self.cycle.image_transfer(self.epoch_num)
             self.eval.get_caption()
             rank,probability = self.eval.eval()
-            reward = probability - 5
-            # reward = probability + 1
+            reward = probability
             self.info += 'rank: {}\n'.format(rank)
             self.eval.update(img_path=self.log_path,start_id=self.seq_num-1-self.opt.cut_frame_num)
         else:
             reward = 0
-
-        # calculate whether it is done
-        self.info += 'now distance:{}\n'.format (distance)
-        self.info += 'AABB distance:{}\n'.format (aabb_dist)
 
         if self.seq_num >= self.max_seq_num:
             done = True
@@ -159,8 +142,8 @@ class Engine106(Engine):
             done = False
 
         # check whether the object is still in the gripper
-        left_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 13, -1)
-        right_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 17, -1)
+        left_closet_info = p.getContactPoints (self.robotId, self.obj_id, 13, -1)
+        right_closet_info = p.getContactPoints (self.robotId, self.obj_id, 17, -1)
         if self.opt.obj_away_loss:
             if len (left_closet_info) == 0 and len (right_closet_info) == 0:
                 done = True
@@ -215,8 +198,8 @@ class Engine106(Engine):
         #         reward = self.opt.out_reward
 
         # check whether the object is still in the gripper
-        left_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 13, -1)
-        right_closet_info = p.getContactPoints (self.kukaId, self.obj_id, 17, -1)
+        left_closet_info = p.getContactPoints (self.robotId, self.obj_id, 13, -1)
+        right_closet_info = p.getContactPoints (self.robotId, self.obj_id, 17, -1)
         if self.opt.obj_away_loss:
             if len (left_closet_info)==0 and len (right_closet_info)==0:
                 done = True

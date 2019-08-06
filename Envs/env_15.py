@@ -22,7 +22,7 @@ import sys
 sys.path.append('./Eval')
 sys.path.append('./')
 from .utils import get_view,safe_path,cut_frame,point2traj,get_gripper_pos,backup_code
-from .model import CNN
+
 
 import pkgutil
 egl = pkgutil.get_loader ('eglRenderer')
@@ -41,7 +41,7 @@ class Engine15(Engine):
         self.fix_orn = np.load (os.path.join (self.env_root, 'init', 'orn.npy'))
 
         for j in range (7):
-            p.resetJointState(self.kukaId, j, self.data_q[0][j], self.data_dq[0][j])
+            p.resetJointState(self.robotId, j, self.data_q[0][j], self.data_dq[0][j])
 
         for init_t in range(100):
             box = p.getAABB(self.obj_id,-1)
@@ -54,7 +54,7 @@ class Engine15(Engine):
 
         start_id = 0
         init_traj = point2traj(points)
-        start_id = self.core(init_traj,orn_traj,start_id)
+        start_id = self.move(init_traj,orn_traj,start_id)
 
         p.stepSimulation()
 
@@ -63,7 +63,7 @@ class Engine15(Engine):
         for grasp_t in range(grasp_stage_num):
             # self.gripperPos = get_gripper_pos (1-grasp_t/grasp_stage_num*0.5)
             self.gripperPos = get_gripper_pos (1-grasp_t/grasp_stage_num*0.7)
-            p.setJointMotorControlArray (bodyIndex=self.kukaId, jointIndices=self.activeGripperJointIndexList,
+            p.setJointMotorControlArray (bodyIndex=self.robotId, jointIndices=self.activeGripperJointIndexList,
                                          controlMode=p.POSITION_CONTROL, targetPositions=self.gripperPos,
                                          forces=[self.gripperForce] * len (self.activeGripperJointIndexList))
             p.stepSimulation ()
@@ -85,7 +85,7 @@ class Engine15(Engine):
         textid = p.loadTexture (texture_file)
         # p.changeVisualShape (self.obj2_id, -1, rgbaColor=[1, 1, 1, 0.9])
         p.changeVisualShape (self.obj2_id, -1, textureUniqueId=textid)
-        self.start_pos = p.getLinkState (self.kukaId, 7)[0]
+        self.start_pos = p.getLinkState (self.robotId, 7)[0]
 
 
     def get_reward (self):

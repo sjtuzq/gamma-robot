@@ -48,7 +48,13 @@ def show_end_pos(test_id=92,trained=True,flag=50):
     ax = Axes3D(fig)
     ax.scatter(pos_data[:,0],pos_data[:,1],pos_data[:,2],c=C)
 
-    plt.show()
+    if not os.path.exists('end_pos_log'):
+        os.mkdir('end_pos_log')
+    # plt.show()
+    if trained:
+        plt.savefig('end_pos_log/test_{}_after.jpg'.format(test_id))
+    else:
+        plt.savefig ('end_pos_log/test_{}_before.jpg'.format(test_id))
 
 def show_dmp_effeciency(test_id=100,flag=100):
     # show_end_pos(test_id=90,trained=False,flag=50)
@@ -114,5 +120,10 @@ if __name__ == '__main__':
     # show_dmp_effeciency(test_id=111,flag=100)
     # show_dmp_effeciency(test_id=112,flag=50)
 
-    show_dmp_effeciency(test_id=112,flag=50)
-    show_dmp_effeciency(test_id=113,flag=50)
+    # show_dmp_effeciency(test_id=127,flag=50)
+    # show_dmp_effeciency(test_id=128,flag=50)
+    # show_dmp_effeciency(test_id=129,flag=50)
+    # show_dmp_effeciency(test_id=130,flag=50)
+    # show_dmp_effeciency(test_id=131,flag=50)
+    show_dmp_effeciency(test_id=132,flag=50)
+    # show_dmp_effeciency(test_id=113,flag=50)

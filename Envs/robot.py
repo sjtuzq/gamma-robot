@@ -19,8 +19,8 @@ class Robot:
        self.p = pybullet_api
        self.opt = opt
 
-       self.gripperMaxForce = 1000.0
-       self.armMaxForce = 200.0
+       self.gripperMaxForce = 300.0
+       self.armMaxForce = 400.0
        self.endEffectorIndex = 7
        self.start_pos = start_pos
 

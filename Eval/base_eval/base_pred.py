@@ -11,17 +11,26 @@ import torchvision
 import re
 import torch.nn.functional as F
 
-from .utils import *
-from .models.multi_column import MultiColumn
-from .transforms_video import *
-from .models.model3D_1 import Model
+if __name__ == '__main__':
+    from utils import *
+    from models.multi_column import MultiColumn
+    from transforms_video import *
+    from models.model3D_1 import Model
+else:
+    from .utils import *
+    from .models.multi_column import MultiColumn
+    from .transforms_video import *
+    from .models.model3D_1 import Model
 
 class Base_eval:
     def __init__(self,opt=None):
         self.opt = opt
         # self.root = '/scr1/system/beta-robot/base_eval'
         # self.root = os.path.join(os.getcwd(),'base_eval')
-        self.root = os.path.join(self.opt.project_root,'scripts','Eval','base_eval')
+        if __name__ == '__main__':
+            self.root = '/scr1/system/gamma-robot/scripts/Eval/base_eval'
+        else:
+            self.root = os.path.join(self.opt.project_root,'scripts','Eval','base_eval')
 
         self.config = load_json_config (os.path.join(self.root,"configs/pretrained/config_model1_left_right.json"))
         
@@ -32,6 +41,20 @@ class Base_eval:
         # setup device - CPU or GPU
         self.device = torch.device ("cuda")
         self.device_ids = [0]
+
+        model_name = "model3D_1"
+        # create model
+        # model = MultiColumn (self.config["num_classes"], self.cnn_def.Model, int (self.config["column_units"]))
+        self.model = MultiColumn (self.config["num_classes"], Model, int (self.config["column_units"]))
+        # multi GPU setting
+        self.model = torch.nn.DataParallel (self.model, self.device_ids).to (self.device)
+
+        save_dir = os.path.join (os.path.join (self.root, "trained_models/pretrained/" + self.config['model_name']))
+        checkpoint_path = os.path.join (save_dir, 'model_best.pth.tar')
+
+        checkpoint = torch.load (checkpoint_path)
+        self.model.load_state_dict (checkpoint['state_dict'])
+        self.model.eval ()
 
 
 
@@ -58,8 +81,8 @@ class Base_eval:
         imgs = transform_pre (imgs)
         imgs = transform_post (imgs)
     
-        num_frames = len (imgs)
-        num_frames_necessary = 72
+        # num_frames = len (imgs)
+        # num_frames_necessary = 72
     
         if len (imgs) < 72:
             imgs.extend ([imgs[-1]] * (72 - len (imgs)))
@@ -69,31 +92,12 @@ class Base_eval:
         return data
 
 
-    def get_reward (self,filepath):
-        model_name = "model3D_1"
-        # create model
-        # model = MultiColumn (self.config["num_classes"], self.cnn_def.Model, int (self.config["column_units"]))
-        model = MultiColumn (self.config["num_classes"], Model, int (self.config["column_units"]))
-        # multi GPU setting
-        model = torch.nn.DataParallel (model, self.device_ids).to (self.device)
-    
-        save_dir = os.path.join (os.path.join(self.root,"trained_models/pretrained/" + self.config['model_name']))
-        checkpoint_path = os.path.join (save_dir, 'model_best.pth.tar')
-    
-        checkpoint = torch.load (checkpoint_path)
-        model.load_state_dict (checkpoint['state_dict'])
-        model.eval ()
-    
-        logits_matrix = []
-        features_matrix = []
-        targets_list = []
-        item_id_list = []
-    
+    def get_baseline_reward (self,filepath):
         with torch.no_grad ():
             input = self.videoloader (filepath)
             input = input.float ().unsqueeze (0)
             input_var = [input.to (self.device)]
-            output = model (input_var, False)
+            output = self.model (input_var, False)
             output = F.softmax (output, 1)
             output = output.cpu ().detach ().numpy ()
             output = np.squeeze (output)
@@ -105,6 +109,14 @@ class Base_eval:
 
 if __name__ == "__main__":
     agent = Base_eval()
-    filepath = '/scr1/system/beta-robot/dataset/actions/106-2/frames'
-    output,output_index = agent.get_reward (filepath)
-    print(output_index)
+    i = 4
+    filepath = '/scr1/system/gamma-robot/logs/td3_log/test1138/epoch-{}'.format (i)
+    output, output_index = agent.get_baseline_reward (filepath)
+    print (i, np.where (output_index == 9)[0][0],output[9]*173)
+
+    # for i in range(100):
+    #     filepath = '/scr1/system/gamma-robot/logs/td3_log/test135/epoch-{}'.format(i)
+    #     output,output_index = agent.get_reward (filepath)
+    #     print(output[9]*173)
+        # print(np.where(output_index==9)[0][0])
+    # print(output_index)

@@ -1,12 +1,10 @@
-"""
-    debug the module of cycle-gan
-"""
-
 import os
 import sys
 import torch
 import numpy as np
+import pybullet
 import matplotlib.pyplot as plt
+import importlib
 
 sys.path.append('./Eval')
 sys.path.append('./Envs')
@@ -17,18 +15,16 @@ sys.path.append('./Cycle')
 from Dmp.gamma_dmp import DMP
 from Eval.gamma_pred import Frame_eval
 from Cycle.gamma_transfer import Frame_transfer
-
-from Envs.env_107 import Engine107
-from Envs.env_106 import Engine106
-from Envs.env_45 import Engine45
-from Envs.env_43 import Engine43
 from Solver.TD3 import TD3
+import Envs.bullet_client as bc
+
 
 from config import opt,device
 
 
-
 def main ():
+    Engine_module = importlib.import_module('Envs.env_{}'.format(opt.action_id))
+    Engine = getattr(Engine_module,'Engine{}'.format(opt.action_id))
     if opt.use_cycle:
         opt.load_cycle = Frame_transfer (opt)
 
@@ -48,7 +44,12 @@ def main ():
                                opt = opt)
         opt.load_video_pred = evaluator
 
-    env = eval('Engine{} (opt)'.format(opt.action_id))
+    if opt.gui:
+        opt.p = bc.BulletClient (connection_mode=pybullet.GUI)
+    else:
+        opt.p = bc.BulletClient (connection_mode=pybullet.DIRECT)
+
+    env = eval('Engine(opt)'.format(opt.action_id))
 
     state_dim = env.observation_space
     action_dim = len (env.action_space['high'])
@@ -66,7 +67,7 @@ def main ():
                 action = agent.select_action (state)
                 next_state, reward, done, info = env.step (np.float32 (action))
                 ep_r += reward
-                env.render ()
+                # env.render ()
                 if done or t == 2000:
                     print ("Ep_i \t{}, the ep_r is \t{:0.2f}, the step is \t{}".format (i, ep_r, t))
                     break
@@ -83,12 +84,23 @@ def main ():
 
                 action = agent.select_action (state)
                 action = action + np.random.normal (0, max_action * opt.noise_level, size=action.shape)
-                action = action.clip (env.action_space['low'], env.action_space['high'])
+                action = action.clip (-max_action, max_action)
+
+                # action = np.array([0,0.2,0.00])
+                # action = np.array ([0, 0., 0.2])   # up
+                # action = np.array ([0, 0.1, -0.05])   # close
+                # action = np.array ([0, -0.15, 0.05])  # away
+
+                action[:3] = np.array([0,0,0])              #stay
+                print(action)
                 next_state, reward, done, info = env.step (action)
 
                 ep_r += reward
                 # if opt.render and i >= opt.render_interval : env.render()
                 agent.memory.push ((state, next_state, action, reward, np.float (done)))
+                if reward>0:
+                    for push_t in range(4):
+                        agent.memory.push ((state, next_state, action, reward, np.float (done)))
                 if i + 1 % 10 == 0:
                     print ('Episode {},  The memory size is {} '.format (i, len (agent.memory.storage)))
                 if len (agent.memory.storage) >= opt.start_train - 1:

@@ -2,6 +2,7 @@ import os
 import sys
 import torch
 import numpy as np
+import pybullet
 import matplotlib.pyplot as plt
 
 sys.path.append('./Eval')
@@ -13,15 +14,17 @@ sys.path.append('./Cycle')
 from Dmp.gamma_dmp import DMP
 from Eval.gamma_pred import Frame_eval
 from Cycle.gamma_transfer import Frame_transfer
+from Solver.TD3 import TD3
+import Envs.bullet_client as bc
 
 from Envs.env_107 import Engine107
 from Envs.env_106 import Engine106
 from Envs.env_45 import Engine45
 from Envs.env_43 import Engine43
-from Solver.TD3 import TD3
+from Envs.env_101 import Engine101
+
 
 from config import opt,device
-
 
 
 def main ():
@@ -43,6 +46,11 @@ def main ():
                                class_label=opt.action_id,
                                opt = opt)
         opt.load_video_pred = evaluator
+
+    if opt.gui:
+        opt.p = bc.BulletClient (connection_mode=pybullet.GUI)
+    else:
+        opt.p = bc.BulletClient (connection_mode=pybullet.DIRECT)
 
     env = eval('Engine{} (opt)'.format(opt.action_id))
 
