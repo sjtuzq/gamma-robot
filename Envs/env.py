@@ -64,6 +64,7 @@ class Engine:
         self.w = self.opt.img_w
         self.h = self.opt.img_h
 
+
     def destroy(self):
         p.disconnect(self.physical_id)
 
@@ -391,6 +392,7 @@ class Engine:
         return observation
 
     def step(self,action):
+        self.info = ''
         if self.opt.use_dmp:
             return_value = self.step_dmp(action)
         else:
@@ -399,19 +401,18 @@ class Engine:
 
     def step_dmp(self,action):
         action = action.squeeze()
+        self.info += 'action:{}\n'.format(str(action))
         self.dmp.set_start(list(self.start_pos))
         dmp_end_pos = [x+y for x,y in zip(self.start_pos,action)]
         self.dmp.set_goal(dmp_end_pos)
         self.traj = self.dmp.get_traj()
 
         start_thresh = self.each_action_lim/2
-        start_thresh = 0
         loose_num = -1
-        if self.opt.add_gripper and action[-1]>start_thresh:
-            loose_num = int((action[-1] - start_thresh)/(self.each_action_lim-start_thresh)*20)
-            loose_num = 10
+        # if self.opt.add_gripper and action[-1]>start_thresh:
+        #     loose_num = int((action[-1] - start_thresh)/(self.each_action_lim-start_thresh)*20)
+        #     loose_num = 10 - loose_num
 
-        # loose_num = 5
         dmp_observations = []
         for step_id,small_action in enumerate(self.traj):
             # if out of range, then stop the motion
@@ -419,19 +420,17 @@ class Engine:
                 if self.start_pos[axis_dim] < self.axis_limit[axis_dim][0] or \
                         self.start_pos[axis_dim] > self.axis_limit[axis_dim][1]:
                     small_action = np.array([0,0,0])
-            if self.opt.action_id == 9:
-                small_action = np.array ([0, 0, 0])
+
+            # if self.opt.action_id == 18:
+            #     small_action = np.array ([0, 0, 0])
+            small_action = np.array ([0, 0, 0])
+
             small_observation = self.step_without_dmp (small_action)
             dmp_observations.append(small_observation)
 
             if step_id==loose_num:
-                # gripperPos = 180-10*self.epoch_num
-                gripperPos = 90
+                gripperPos = 0
                 self.robot.gripperControl (gripperPos)
-                # grasp_stage_num = 100
-                # for grasp_t in range (grasp_stage_num):
-                #     gripperPos = (grasp_stage_num-grasp_t) / float (grasp_stage_num) * 180.0
-                #     self.robot.gripperControl (gripperPos)
 
         self.observation = dmp_observations[0][0]
         reward = dmp_observations[-1][1]
@@ -442,7 +441,6 @@ class Engine:
     def step_without_dmp(self,action):
         action = action.squeeze()
         self.seq_num += 1
-        self.info = ''
         self.info += 'seq_num:{}\n'.format(self.seq_num)
         self.info += 'now_pos:{}\n'.format(self.start_pos)
         self.info += 'action:{}\n'.format(action)

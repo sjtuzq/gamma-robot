@@ -21,11 +21,12 @@ from .utils import get_view,safe_path,cut_frame,point2traj,get_gripper_pos,backu
 import pkgutil
 egl = pkgutil.get_loader ('eglRenderer')
 
+
 from .env import Engine
 
-class Engine19(Engine):
+class Engine1000(Engine):
     def __init__(self,opt):
-        super(Engine19,self).__init__(opt)
+        super(Engine1000,self).__init__(opt)
 
     def init_grasp(self):
         try:
@@ -63,7 +64,7 @@ class Engine19(Engine):
             start_id += 1
 
         pos = p.getLinkState (self.robotId, 7)[0]
-        up_traj = point2traj([pos, [pos[0], pos[1]-0.08, pos[2]+0.25]])
+        up_traj = point2traj([pos, [pos[0]+0.1, pos[1]+0.08, pos[2]+0.25]])
         start_id = self.move(up_traj, orn_traj,start_id)
 
         if self.opt.rand_start == 'rand':
@@ -100,7 +101,7 @@ class Engine19(Engine):
                                       globalScaling=self.box_scaling)#, physicsClientId=self.physical_id)
         else:
             self.box_file = os.path.join (self.env_root, "urdf/openbox/openbox.urdf")
-            self.box_position = [0.48, 0.00, 0.34]
+            self.box_position = [0.38, 0.00, 0.34]
             self.box_scaling = 0.00037
             self.box_orientation = p.getQuaternionFromEuler ([0, 0, math.pi/2])
             self.box_id = p.loadURDF (fileName=self.box_file, basePosition=self.box_position,

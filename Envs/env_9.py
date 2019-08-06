@@ -110,7 +110,7 @@ class Engine9(Engine):
         texture_path = os.path.join(self.env_root,'texture/sun_textures')
         texture_file = os.path.join (texture_path, random.sample (os.listdir (texture_path), 1)[0])
         textid = p.loadTexture (texture_file)
-        p.changeVisualShape (self.obj_id, -1, rgbaColor=[1, 0, 0, 1])
+        p.changeVisualShape (self.obj_id, -1, rgbaColor=[2, 0, 0, 1])
 
         # self.p.changeDynamics (self.obj_id, -1, linearDamping=20.0)
         # self.p.changeDynamics (self.obj_id, -1, angularDamping=10.0)

@@ -64,8 +64,9 @@ class Engine17(Engine):
             start_id += 1
 
         pos = p.getLinkState (self.robotId, 7)[0]
-        up_traj = point2traj([pos, [pos[0]+0.1, pos[1]+0.13, pos[2]+0.08]])
+        up_traj = point2traj([pos, [pos[0]+0.1, pos[1]+0.08, pos[2]+0.25]])
         start_id = self.move(up_traj, orn_traj,start_id)
+
 
         if self.opt.rand_start == 'rand':
             # move in z-axis direction

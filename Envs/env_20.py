@@ -63,7 +63,7 @@ class Engine20(Engine):
             start_id += 1
 
         pos = p.getLinkState (self.robotId, 7)[0]
-        up_traj = point2traj([pos, [pos[0], pos[1]+0.10, pos[2]+0.25]])
+        up_traj = point2traj([pos, [pos[0]+0.03, pos[1]+0.13, pos[2]+0.3]])
         start_id = self.move(up_traj, orn_traj,start_id)
 
         if self.opt.rand_start == 'rand':

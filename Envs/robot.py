@@ -86,7 +86,7 @@ class Robot:
             self.gripperPos = np.array(self.gripperUpperLimitList) * (1 - self.gripperOpen) + np.array(self.gripperLowerLimitList) * self.gripperOpen
             self.gripperPos = self.gripperPos.tolist()
             armForce = [self.armMaxForce] * len(self.controlled_joints)
-            gripperForce = [self.gripper_max_force] * len(self.activeGripperJointIndexList)
+            gripperForce = [self.gripperMaxForce] * len(self.activeGripperJointIndexList)
             self.p.setJointMotorControlArray(bodyUniqueId=self.robotId,jointIndices=self.controlled_joints,controlMode=self.p.POSITION_CONTROL,targetPositions=q_list,forces=armForce)
             self.p.setJointMotorControlArray(bodyUniqueId=self.robotId,jointIndices=self.activeGripperJointIndexList,controlMode=self.p.POSITION_CONTROL,targetPositions=self.gripperPos,forces=gripperForce)
         self.p.stepSimulation()

@@ -52,35 +52,42 @@ class Frame_eval:
         self.result_file = os.path.join(self.memory_path,'result.txt')
 
     def eval(self):
-        prob,pred = get_pred(self.video_path,self.caption_file,self.opt)
-        prob,pred = prob[0],pred[0]
-
         output, output_index = self.base_eval.get_baseline_reward(self.img_path)
+        rank = np.argwhere (output_index == self.class_label).squeeze () + 1
+        reward = output[self.class_label] * 173
+        reward = F.sigmoid(torch.tensor(reward).float())- F.sigmoid(torch.tensor(1).float())
+        return rank,reward
 
-        # print(pred,output_index)
-
-        # using softmax
-        if self.opt.prob_softmax:
-            prob = torch.softmax(torch.tensor(prob).float(),0).data.numpy()
-            prob = (prob - prob.mean())/np.std(prob)
-
-        # reward 1
-        rank = np.argwhere (pred == self.class_label).squeeze () + 1
-        reward1 = prob[np.argwhere (pred == self.class_label).squeeze ()]
-
-        # reward 2
-        rank2 = np.argwhere (output_index == self.class_label).squeeze () + 1
-        reward2 = output[self.class_label] * 173
-
-        reward3 = F.sigmoid(torch.tensor(reward2).float())- F.sigmoid(torch.tensor(1).float())
-
-        # # reward 3
-        # reward3 = 173./rank
-        #
-        # # reward 4
-        # reward4 = 173./rank2
-
-        return rank2,reward3
+    # def eval(self):
+    #     prob,pred = get_pred(self.video_path,self.caption_file,self.opt)
+    #     prob,pred = prob[0],pred[0]
+    #
+    #     output, output_index = self.base_eval.get_baseline_reward(self.img_path)
+    #
+    #     # print(pred,output_index)
+    #
+    #     # using softmax
+    #     if self.opt.prob_softmax:
+    #         prob = torch.softmax(torch.tensor(prob).float(),0).data.numpy()
+    #         prob = (prob - prob.mean())/np.std(prob)
+    #
+    #     # reward 1
+    #     rank = np.argwhere (pred == self.class_label).squeeze () + 1
+    #     reward1 = prob[np.argwhere (pred == self.class_label).squeeze ()]
+    #
+    #     # reward 2
+    #     rank2 = np.argwhere (output_index == self.class_label).squeeze () + 1
+    #     reward2 = output[self.class_label] * 173
+    #
+    #     reward3 = F.sigmoid(torch.tensor(reward2).float())- F.sigmoid(torch.tensor(1).float())
+    #
+    #     # # reward 3
+    #     # reward3 = 173./rank
+    #     #
+    #     # # reward 4
+    #     # reward4 = 173./rank2
+    #
+    #     return rank2,reward3
 
         # if self.class_label==107 and self.opt.merge_class and self.test_id==101:
         #     propability = 0

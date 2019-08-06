@@ -29,7 +29,7 @@ class Engine10(Engine):
 
     def init_grasp(self):
         try:
-            p.removeBody(self.box_id)
+            p.removeBody (self.box_id)
         except:
             pass
 
@@ -38,13 +38,13 @@ class Engine10(Engine):
         self.fix_orn = np.load (os.path.join (self.env_root, 'init', 'orn.npy'))
 
         for j in range (7):
-            self.p.resetJointState(self.robotId, j, self.data_q[0][j], self.data_dq[0][j])
+            self.p.resetJointState (self.robotId, j, self.data_q[0][j], self.data_dq[0][j])
 
-        self.robot.gripperControl(0)
+        self.robot.gripperControl (0)
 
-        for init_t in range(100):
-            box = p.getAABB(self.obj_id,-1)
-            center = [(x+y)*0.5 for x,y in zip(box[0],box[1])]
+        for init_t in range (100):
+            box = p.getAABB (self.obj_id, -1)
+            center = [(x + y) * 0.5 for x, y in zip (box[0], box[1])]
             center[0] -= 0.05
             center[1] -= 0.05
             center[2] += 0.03
@@ -52,14 +52,14 @@ class Engine10(Engine):
         points = np.array ([pos_traj[0], center])
 
         start_id = 0
-        init_traj = point2traj(points)
-        start_id = self.move(init_traj,orn_traj,start_id)
+        init_traj = point2traj (points)
+        start_id = self.move (init_traj, orn_traj, start_id)
 
         # grasping
         grasp_stage_num = 10
-        for grasp_t in range(grasp_stage_num):
-            gripperPos = grasp_t / float(grasp_stage_num) * 180.0
-            self.robot.gripperControl(gripperPos)
+        for grasp_t in range (grasp_stage_num):
+            gripperPos = grasp_t / float (grasp_stage_num) * 180.0
+            self.robot.gripperControl (gripperPos)
             start_id += 1
 
         pos = p.getLinkState (self.robotId, 7)[0]
