@@ -145,7 +145,7 @@ class Engine:
         texture_path = os.path.join(self.env_root,'texture/sun_textures')
         texture_file = os.path.join(texture_path,random.sample(os.listdir(texture_path),1)[0])
         textid = self.p.loadTexture(texture_file)
-        self.p.changeVisualShape (self.obj_id, -1, textureUniqueId=textid)
+        # self.p.changeVisualShape (self.obj_id, -1, textureUniqueId=textid)
 
     def reset_obj(self):
         if self.opt.object_id == 'bottle':
@@ -389,6 +389,16 @@ class Engine:
             observation = np.array(p.getLinkState (self.robotId, 7)[0])
         elif self.opt.observation == 'before_cnn':
             observation = np.array(observation)
+
+        if self.opt.use_embedding:
+            action_p = random.random ()
+            if action_p < 0.5:
+                # action = np.array ([0, 0, 0.2])
+                self.opt.load_embedding = np.array([1,0]) # action 45: move sth up
+            else:
+                # action = np.array ([0, 0, -0.2])
+                self.opt.load_embedding = np.array ([0, 1]) # action 43: move sth down
+
         return observation
 
     def step(self,action):
@@ -401,40 +411,65 @@ class Engine:
 
     def step_dmp(self,action):
         action = action.squeeze()
+
+        # action = np.array([0,0.2,0.00])
+        # action = np.array ([0, 0., 0.2])   # up
+        # action = np.array ([0, 0.1, -0.05])   # close
+        # action = np.array ([0, -0.15, 0.05])  # away
+
+        # action = np.array([0,-0.15+0.03*self.epoch_num,0.3])
+
+        if self.opt.use_embedding:
+            if self.opt.load_embedding[0] == 1:
+                action = np.array([0,0,0.2])
+            else:
+                action = np.array([0,0,-0.2])
+
         self.info += 'action:{}\n'.format(str(action))
         self.dmp.set_start(list(self.start_pos))
         dmp_end_pos = [x+y for x,y in zip(self.start_pos,action)]
         self.dmp.set_goal(dmp_end_pos)
         self.traj = self.dmp.get_traj()
 
-        start_thresh = self.each_action_lim/2
         loose_num = -1
-        # if self.opt.add_gripper and action[-1]>start_thresh:
-        #     loose_num = int((action[-1] - start_thresh)/(self.each_action_lim-start_thresh)*20)
-        #     loose_num = 10 - loose_num
+        start_thresh = 0
+        if self.opt.add_gripper and action[-1]>start_thresh:
+            # loose_num = int((action[-1] - start_thresh)/(self.each_action_lim-start_thresh)*20)
+            # loose_num = 10 - loose_num
+            loose_num = 10
+            if self.opt.action_id >= 16 and self.opt.action_id <= 20:
+                loose_num = 5
 
         dmp_observations = []
+        # self.traj = np.array ([[-0.006, 0, -0.015]] * 20)
+        # self.traj[:,0] = -0.006
+        if self.opt.load_embedding[0]==1:
+            self.traj[:,2] = 0.015
+        else:
+            self.traj[:, 2] = -0.015
+
         for step_id,small_action in enumerate(self.traj):
+            # small_action = self.traj[19-step_id]
             # if out of range, then stop the motion
             for axis_dim in range (3):
                 if self.start_pos[axis_dim] < self.axis_limit[axis_dim][0] or \
                         self.start_pos[axis_dim] > self.axis_limit[axis_dim][1]:
                     small_action = np.array([0,0,0])
 
-            # if self.opt.action_id == 18:
-            #     small_action = np.array ([0, 0, 0])
-            small_action = np.array ([0, 0, 0])
+            if not self.opt.add_motion:
+                small_action = np.array ([0, 0, 0])
 
             small_observation = self.step_without_dmp (small_action)
             dmp_observations.append(small_observation)
 
-            if step_id==loose_num:
-                gripperPos = 0
+            if self.opt.add_gripper and step_id==loose_num:
+                gripperPos = 50
                 self.robot.gripperControl (gripperPos)
 
         self.observation = dmp_observations[0][0]
         reward = dmp_observations[-1][1]
         done = True
+        print(self.info)
         return self.observation,reward,done,self.info
 
 
@@ -496,36 +531,22 @@ class Engine:
 
         return self.get_reward()
 
-    def get_reward(self):
-        distance = sum ([(x - y) ** 2 for x, y in zip (self.start_pos, self.target_pos)]) ** 0.5
-        # reward = (0.15 - distance) * 7
-        reward = (self.last_distance - distance)*100
-        # calculate whether it is done
-        if self.seq_num>=self.max_seq_num:
-            done = True
+    def get_reward (self):
+        if self.opt.video_reward:
+            return self.get_video_reward()
         else:
-            done = False
-
-        for axis_dim in range(3):
-            if self.start_pos[axis_dim]<self.axis_limit[axis_dim][0] or \
-                    self.start_pos[axis_dim]>self.axis_limit[axis_dim][1]:
-                done = True
-                reward = -1
-
-        self.info += 'reward: {}\n\n'.format(reward)
-        self.log_info.write(self.info)
-        return self.observation,reward,done,self.info
+            return self.get_handcraft_reward()
 
     def get_video_reward(self):
         if ((self.seq_num-1)%self.opt.give_reward_num==self.opt.give_reward_num-1) \
                 and self.seq_num>=self.opt.cut_frame_num:
             if self.opt.use_cycle:
                 self.cycle.image_transfer(self.epoch_num)
+            self.eval.update(img_path=self.log_path,start_id=self.seq_num-1-self.opt.cut_frame_num)
             self.eval.get_caption()
             rank,probability = self.eval.eval()
             reward = probability
             self.info += 'rank: {}\n'.format(rank)
-            self.eval.update(img_path=self.log_path,start_id=self.seq_num-1-self.opt.cut_frame_num)
         else:
             reward = 0
 
@@ -545,3 +566,23 @@ class Engine:
         self.log_info.write (self.info)
         print (self.info)
         return self.observation, reward, done, self.info
+
+    def get_handcraft_reward(self):
+        distance = sum ([(x - y) ** 2 for x, y in zip (self.start_pos, self.target_pos)]) ** 0.5
+        # reward = (0.15 - distance) * 7
+        reward = (self.last_distance - distance)*100
+        # calculate whether it is done
+        if self.seq_num>=self.max_seq_num:
+            done = True
+        else:
+            done = False
+
+        for axis_dim in range(3):
+            if self.start_pos[axis_dim]<self.axis_limit[axis_dim][0] or \
+                    self.start_pos[axis_dim]>self.axis_limit[axis_dim][1]:
+                done = True
+                reward = -1
+
+        self.info += 'reward: {}\n\n'.format(reward)
+        self.log_info.write(self.info)
+        return self.observation,reward,done,self.info

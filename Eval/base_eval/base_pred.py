@@ -42,7 +42,7 @@ class Base_eval:
         self.device = torch.device ("cuda")
         self.device_ids = [0]
 
-        model_name = "model3D_1"
+        # model_name = "model3D_1"
         # create model
         # model = MultiColumn (self.config["num_classes"], self.cnn_def.Model, int (self.config["column_units"]))
         self.model = MultiColumn (self.config["num_classes"], Model, int (self.config["column_units"]))
@@ -71,12 +71,16 @@ class Base_eval:
                 mean=[0.485, 0.456, 0.406],  # default values for imagenet
                 std=[0.229, 0.224, 0.225]), "img"]
         ])
-    
+
         imgs = []
         for file in os.listdir (filepath):
+            file_id = int (file.split ('.')[0])
             tmp = cv2.imread (os.path.join (filepath, file))
-            tmp = cv2.resize (tmp, (84, 84))
-            imgs.append (tmp)
+            tmp = cv2.cvtColor (tmp, cv2.COLOR_BGR2RGB)
+            imgs.append ([tmp, file_id])
+
+        imgs = sorted (imgs, key=lambda x: x[1])
+        imgs = [x[0] for x in imgs]
     
         imgs = transform_pre (imgs)
         imgs = transform_post (imgs)
@@ -109,10 +113,15 @@ class Base_eval:
 
 if __name__ == "__main__":
     agent = Base_eval()
-    i = 4
-    filepath = '/scr1/system/gamma-robot/logs/td3_log/test1138/epoch-{}'.format (i)
+    video_id = 43
+    test_id = 1155
+    epoch_id = 0
+    filepath = '/scr1/system/gamma-robot/logs/td3_log/test{}/epoch-{}'.format (test_id,epoch_id)
+    filepath = '/scr1/system/beta-robot/dataset/actions/{}-4/frames'.format(video_id)
+
     output, output_index = agent.get_baseline_reward (filepath)
-    print (i, np.where (output_index == 9)[0][0],output[9]*173)
+
+    print (np.where (output_index == video_id)[0][0],output[video_id]*173)
 
     # for i in range(100):
     #     filepath = '/scr1/system/gamma-robot/logs/td3_log/test135/epoch-{}'.format(i)

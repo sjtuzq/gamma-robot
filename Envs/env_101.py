@@ -118,42 +118,6 @@ class Engine101(Engine):
         # obj_center = [(x + y) * 0.5 for x, y in zip (obj[0], obj[1])]
         # self.last_aabb_dist = sum ([(x - y) ** 2 for x, y in zip (box_center, obj_center)]) ** 0.5
 
-    def get_reward (self):
-        if self.opt.video_reward:
-            return self.get_video_reward()
-        else:
-            return self.get_handcraft_reward()
-
-    def get_video_reward(self):
-        if ((self.seq_num-1)%self.opt.give_reward_num==self.opt.give_reward_num-1) \
-                and self.seq_num>=self.opt.cut_frame_num:
-            if self.opt.use_cycle:
-                self.cycle.image_transfer(self.epoch_num)
-            self.eval.get_caption()
-            rank,probability = self.eval.eval()
-            reward = probability
-            self.info += 'rank: {}\n'.format(rank)
-            self.eval.update(img_path=self.log_path,start_id=self.seq_num-1-self.opt.cut_frame_num)
-        else:
-            reward = 0
-
-        if self.seq_num >= self.max_seq_num:
-            done = True
-        else:
-            done = False
-
-        # check whether the object is still in the gripper
-        left_closet_info = p.getContactPoints (self.robotId, self.obj_id, 13, -1)
-        right_closet_info = p.getContactPoints (self.robotId, self.obj_id, 17, -1)
-        if self.opt.obj_away_loss:
-            if len (left_closet_info) == 0 and len (right_closet_info) == 0:
-                done = True
-
-        self.info += 'reward: {}\n\n'.format (reward)
-        self.log_info.write (self.info)
-        print (self.info)
-        return self.observation, reward, done, self.info
-
     def get_handcraft_reward (self):
         distance = sum ([(x - y) ** 2 for x, y in zip (self.start_pos, self.target_pos)]) ** 0.5
         box = p.getAABB (self.box_id, -1)

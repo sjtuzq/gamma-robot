@@ -86,11 +86,6 @@ def main ():
                 action = action + np.random.normal (0, max_action * opt.noise_level, size=action.shape)
                 action = action.clip (-max_action, max_action)
 
-                # action = np.array([0,0.2,0.00])
-                # action = np.array ([0, 0., 0.2])   # up
-                # action = np.array ([0, 0.1, -0.05])   # close
-                # action = np.array ([0, -0.15, 0.05])  # away
-
                 print('epoch id:{}, action:{}'.format(i,str(action)))
                 next_state, reward, done, info = env.step (action)
 

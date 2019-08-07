@@ -120,7 +120,7 @@ class Engine15(Engine):
         self.start_pos = p.getLinkState (self.robotId, 7)[0]
 
 
-    def get_reward (self):
+    def get_handcraft_reward(self):
         distance = sum ([(x - y) ** 2 for x, y in zip (self.start_pos, self.target_pos)]) ** 0.5
 
         obj2 = p.getAABB (self.obj2_id, -1)

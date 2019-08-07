@@ -108,7 +108,7 @@ class Engine28 (Engine):
         self.fix_orn = [self.fix_orn]
         self.start_pos = p.getLinkState (self.robotId, 7)[0]
 
-    def get_reward (self):
+    def get_handcraft_reward(self):
         distance = sum ([(x - y) ** 2 for x, y in zip (self.start_pos, self.target_pos)]) ** 0.5
 
         obj = p.getAABB (self.obj_id, -1)
