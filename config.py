@@ -84,6 +84,7 @@ parser.add_argument('--load_video_pred',  default=None, type=object) #
 parser.add_argument('--add_mask',  default=True, type=int) #
 parser.add_argument('--prob_softmax',  default=False, type=int) #
 parser.add_argument('--merge_class',  default=True, type=int) #
+parser.add_argument('--use_trn',  default=False, type=int) #
 
 
 # environment action using DMP part hyperparameters

@@ -57,36 +57,29 @@ class Frame_eval:
         else:
             self.class_label = 43
 
-        prob, pred = get_pred (self.video_path, self.caption_file, self.opt)
-        prob,pred = prob[0],pred[0]
-        trn_rank = np.argwhere (pred == self.class_label).squeeze () + 1
-        trn_reward = prob[np.argwhere (pred == self.class_label).squeeze ()]
+        if self.opt.use_trn:
+            prob, pred = get_pred (self.video_path, self.caption_file, self.opt)
+            prob,pred = prob[0],pred[0]
+            trn_rank = np.argwhere (pred == self.class_label).squeeze () + 1
+            trn_reward = prob[np.argwhere (pred == self.class_label).squeeze ()]
 
-        # rank43 = np.argwhere (pred == 43).squeeze () + 1
-        # rank45 = np.argwhere (pred == 45).squeeze () + 1
+            rank43 = np.argwhere (pred == 43).squeeze () + 1
+            rank45 = np.argwhere (pred == 45).squeeze () + 1
 
-        output, output_index = self.base_eval.get_baseline_reward(self.img_path)
-        rank = np.argwhere (output_index == self.class_label).squeeze () + 1
-        reward = output[self.class_label] * 173
-        reward = F.sigmoid(torch.tensor(reward).float())- F.sigmoid(torch.tensor(1).float())
+            print ('label:{}  rank43:{}  rank45:{}'.format (self.class_label, rank43, rank45))
+            return trn_rank,trn_reward
 
-        rank43 = np.argwhere (output_index == 43).squeeze () + 1
-        rank45 = np.argwhere (output_index == 45).squeeze () + 1
+        else:
+            output, output_index = self.base_eval.get_baseline_reward(self.img_path)
+            rank = np.argwhere (output_index == self.class_label).squeeze () + 1
+            reward = output[self.class_label] * 173
+            reward = F.sigmoid(torch.tensor(reward).float())- F.sigmoid(torch.tensor(1).float())
 
-        # if self.class_label == 43:
-        #     if rank43<rank45:
-        #         trn_rank = 1
-        #     else:
-        #         trn_rank = 100
-        # elif self.class_label == 45:
-        #     if rank45<rank43:
-        #         trn_rank = 1
-        #     else:
-        #         trn_rank = 100
+            rank43 = np.argwhere (output_index == 43).squeeze () + 1
+            rank45 = np.argwhere (output_index == 45).squeeze () + 1
 
-        # return trn_rank,trn_reward
-        print('label:{}  rank43:{}  rank45:{}'.format(self.class_label,rank43,rank45))
-        return rank,reward
+            print('label:{}  rank43:{}  rank45:{}'.format(self.class_label,rank43,rank45))
+            return rank,reward
 
     # def eval(self):
     #     prob,pred = get_pred(self.video_path,self.caption_file,self.opt)
