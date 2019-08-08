@@ -1,7 +1,11 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from .dmp_discrete import DMPs_discrete
+
+try:
+    from .dmp_discrete import DMPs_discrete
+except:
+    from dmp_discrete import DMPs_discrete
 
 class DMP:
     def __init__(self,opt):

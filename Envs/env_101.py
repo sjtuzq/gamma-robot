@@ -18,17 +18,26 @@ import torch
 import sys
 sys.path.append('./Eval')
 sys.path.append('./')
-from .utils import get_view,safe_path,cut_frame,point2traj,get_gripper_pos,backup_code
+BASE_FILE = os.path.abspath(os.path.dirname(__file__))
+print(BASE_FILE)
+sys.path.insert(0,BASE_FILE)
+
+#if __name__ == '__main__':
+try: 
+    from .utils import get_view,safe_path,cut_frame,point2traj,get_gripper_pos,backup_code 
+    from .env import Engine
+except Exception:
+    from utils import get_view,safe_path,cut_frame,point2traj,get_gripper_pos,backup_code
+    from env import Engine
+
 
 import pkgutil
 egl = pkgutil.get_loader ('eglRenderer')
 
-
-from .env import Engine
-
 class Engine101(Engine):
-    def __init__(self,opt):
+    def __init__(self,opt,worker_id=None):
         super(Engine101,self).__init__(opt)
+        self.wid = worker_id
 
     def init_grasp(self):
         pos_traj = np.load (os.path.join (self.env_root, 'init', 'pos.npy'))

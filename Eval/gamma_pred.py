@@ -52,10 +52,8 @@ class Frame_eval:
         self.result_file = os.path.join(self.memory_path,'result.txt')
 
     def eval(self):
-        if self.opt.load_embedding[0] == 1:
-            self.class_label = 45
-        else:
-            self.class_label = 43
+        if self.opt.use_embedding:
+            self.class_label = self.opt.load_embedding
 
         if self.opt.use_trn:
             prob, pred = get_pred (self.video_path, self.caption_file, self.opt)
@@ -75,10 +73,21 @@ class Frame_eval:
             reward = output[self.class_label] * 173
             reward = F.sigmoid(torch.tensor(reward).float())- F.sigmoid(torch.tensor(1).float())
 
-            rank43 = np.argwhere (output_index == 43).squeeze () + 1
-            rank45 = np.argwhere (output_index == 45).squeeze () + 1
+            # the following function does not work
+            # reward = output[self.class_label] * 173 - 1
+            # reward = F.sigmoid (torch.tensor (reward).float ()) - 0.5
 
-            print('label:{}  rank43:{}  rank45:{}'.format(self.class_label,rank43,rank45))
+            # rank43 = np.argwhere (output_index == 43).squeeze () + 1
+            # rank45 = np.argwhere (output_index == 45).squeeze () + 1
+
+            if self.opt.use_embedding:
+                reward43 = F.sigmoid (torch.tensor (output[43] * 173).float ()) - F.sigmoid (torch.tensor (1).float ())
+                reward45 = F.sigmoid (torch.tensor (output[45] * 173).float ()) - F.sigmoid (torch.tensor (1).float ())
+                reward = [reward45,reward43]
+
+                reward = [reward45*(reward45-reward43),reward43*(reward43-reward45)]
+
+            # print('label:{}  rank43:{}  rank45:{}'.format(self.class_label,rank43,rank45))
             return rank,reward
 
     # def eval(self):

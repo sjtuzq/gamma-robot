@@ -31,6 +31,11 @@ class Engine107(Engine):
         super(Engine107,self).__init__(opt)
 
     def init_grasp(self):
+        try:
+            p.removeBody(self.box_id)
+        except:
+            pass
+
         pos_traj = np.load (os.path.join (self.env_root, 'init', 'pos.npy'))
         orn_traj = np.load (os.path.join (self.env_root, 'init', 'orn.npy'))
         self.fix_orn = np.load (os.path.join (self.env_root, 'init', 'orn.npy'))

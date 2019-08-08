@@ -16,8 +16,20 @@ import torch
 import sys
 sys.path.append('./Eval')
 sys.path.append('./')
-from .utils import get_view,safe_path,cut_frame,point2traj,get_gripper_pos,backup_code
-from .robot import Robot
+"""
+try:
+    from .utils import get_view,safe_path,cut_frame,point2traj,get_gripper_pos,backup_code
+    from .robot import Robot
+except Exception:
+    from utils import get_view,safe_path,cut_frame,point2traj,get_gripper_pos,backup_code
+    from robot import Robot
+"""
+if __name__ == "__main__":
+    from .utils import get_view,safe_path,cut_frame,point2traj,get_gripper_pos,backup_code
+    from .robot import Robot
+else:
+    from utils import get_view,safe_path,cut_frame,point2traj,get_gripper_pos,backup_code
+    from robot import Robot
 
 import pkgutil
 egl = pkgutil.get_loader ('eglRenderer')
@@ -41,7 +53,7 @@ class Engine:
 
         if self.opt.use_dmp:
             self.dmp = self.opt.load_dmp
-            assert (self.opt.video_reward)
+            # assert (self.opt.video_reward)
 
         self.dataset_root = os.path.join(opt.project_root,'dataset')
         self.log_root = os.path.join(opt.project_root,'logs')
@@ -392,14 +404,20 @@ class Engine:
 
         if self.opt.use_embedding:
             action_p = random.random ()
-            if action_p < 0.5:
-                # action = np.array ([0, 0, 0.2])
-                self.opt.load_embedding = np.array([1,0]) # action 45: move sth up
-            else:
-                # action = np.array ([0, 0, -0.2])
-                self.opt.load_embedding = np.array ([0, 1]) # action 43: move sth down
 
-        return observation
+            if action_p < 0.5:
+                self.action_embedding = np.array([1,0])
+                self.opt.load_embedding = 45  # action 45: move sth up
+            else:
+                self.action_embedding = np.array ([0, 1])
+                self.opt.load_embedding = 43  # action 43: move sth down
+
+        if self.opt.use_embedding:
+            self.observation = [self.action_embedding, observation]
+        else:
+            self.observation = observation
+
+        return self.observation
 
     def step(self,action):
         self.info = ''
@@ -412,18 +430,18 @@ class Engine:
     def step_dmp(self,action):
         action = action.squeeze()
 
-        # action = np.array([0,0.2,0.00])
-        # action = np.array ([0, 0., 0.2])   # up
-        # action = np.array ([0, 0.1, -0.05])   # close
-        # action = np.array ([0, -0.15, 0.05])  # away
-
-        # action = np.array([0,-0.15+0.03*self.epoch_num,0.3])
+        # init_pos = self.start_pos
 
         if self.opt.use_embedding:
-            if self.opt.load_embedding[0] == 1:
-                action = np.array([0,0,0.2])
-            else:
-                action = np.array([0,0,-0.2])
+            self.info += 'target:{}\n'.format(str(self.action_embedding))
+
+        # p.changeVisualShape (self.obj_id, -1, rgbaColor=[0, 0, 1, 1])
+        # action[-1] = -0.1
+        # orn_traj = np.load (os.path.join (self.env_root, 'init', 'orn.npy'))
+        # start_id = 0
+        # pos = p.getLinkState (self.robotId, 7)[0]
+        # up_traj = point2traj ([pos, [pos[0], pos[1], pos[2] - 0.15]])
+        # start_id = self.move (up_traj, orn_traj, start_id)
 
         self.info += 'action:{}\n'.format(str(action))
         self.dmp.set_start(list(self.start_pos))
@@ -434,31 +452,21 @@ class Engine:
         loose_num = -1
         start_thresh = 0
         if self.opt.add_gripper and action[-1]>start_thresh:
-            # loose_num = int((action[-1] - start_thresh)/(self.each_action_lim-start_thresh)*20)
-            # loose_num = 10 - loose_num
             loose_num = 10
             if self.opt.action_id >= 16 and self.opt.action_id <= 20:
                 loose_num = 5
 
         dmp_observations = []
-        # self.traj = np.array ([[-0.006, 0, -0.015]] * 20)
-        # self.traj[:,0] = -0.006
-        if self.opt.load_embedding[0]==1:
-            self.traj[:,2] = 0.015
-        else:
-            self.traj[:, 2] = -0.015
-
         for step_id,small_action in enumerate(self.traj):
-            # small_action = self.traj[19-step_id]
             # if out of range, then stop the motion
             for axis_dim in range (3):
                 if self.start_pos[axis_dim] < self.axis_limit[axis_dim][0] or \
                         self.start_pos[axis_dim] > self.axis_limit[axis_dim][1]:
                     small_action = np.array([0,0,0])
-
+            # if not add motion as the decision part
             if not self.opt.add_motion:
                 small_action = np.array ([0, 0, 0])
-
+            # execute one small step
             small_observation = self.step_without_dmp (small_action)
             dmp_observations.append(small_observation)
 
@@ -466,10 +474,23 @@ class Engine:
                 gripperPos = 50
                 self.robot.gripperControl (gripperPos)
 
-        self.observation = dmp_observations[0][0]
+        if self.opt.use_embedding:
+            self.observation = [self.action_embedding, dmp_observations[0][0]]
+        else:
+            self.observation = dmp_observations[0][0]
+
+
+
         reward = dmp_observations[-1][1]
+
+        # end_pos = p.getLinkState (self.robotId, 7)[0]
+        # reward = [end_pos[2] - init_pos[2],init_pos[2] - end_pos[2]]
+
+        self.info += 'total reward: {}\n\n'.format (reward)
+
         done = True
         print(self.info)
+        self.log_info.write (self.info)
         return self.observation,reward,done,self.info
 
 
@@ -563,8 +584,8 @@ class Engine:
                 done = True
 
         self.info += 'reward: {}\n\n'.format (reward)
-        self.log_info.write (self.info)
-        print (self.info)
+        # self.log_info.write (self.info)
+        # print (self.info)
         return self.observation, reward, done, self.info
 
     def get_handcraft_reward(self):
@@ -584,5 +605,5 @@ class Engine:
                 reward = -1
 
         self.info += 'reward: {}\n\n'.format(reward)
-        self.log_info.write(self.info)
+        # self.log_info.write(self.info)
         return self.observation,reward,done,self.info

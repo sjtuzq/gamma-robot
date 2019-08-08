@@ -11,44 +11,56 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 parser = argparse.ArgumentParser()
 
+# frequently used parameters
+parser.add_argument('--capacity', default=5000, type=int) # replay buffer size
+parser.add_argument('--start_train', default=800, type=int) # replay buffer size
+parser.add_argument('--learning_rate', default=0.0001, type=float)
+parser.add_argument('--noise_level', default=0.5, type=float)
+parser.add_argument('--noise_training_level', default=0.05, type=float)
+parser.add_argument('--batch_size', default=16, type=int) # mini batch size
+parser.add_argument('--test_id',  default=2001, type=int) #  1000+ means debug
+parser.add_argument('--project_root',  default='/scr1/system/gamma-robot/', type=str) # project root path
+# parser.add_argument('--project_root',  default='/juno/u/qiangzhang/system/gamma-robot/', type=str) # project root path
+
+
+
 # reinforcement learning part hyper parameters
 parser.add_argument('--mode', default='train', type=str) # mode = 'train' or 'test'
 parser.add_argument("--env_name", default="Pendulum-v0")  # OpenAI gym environment name， BipedalWalker-v2
 parser.add_argument('--tau',  default=0.005, type=float) # target smoothing coefficient
 parser.add_argument('--target_update_interval', default=1, type=int)
 parser.add_argument('--iteration', default=5, type=int)
-parser.add_argument('--learning_rate', default=0.00001, type=float)
+
 parser.add_argument('--update_time', default=10, type=int)
 parser.add_argument('--gamma', default=0.99, type=int) # discounted factor
-parser.add_argument('--capacity', default=5000, type=int) # replay buffer size
-parser.add_argument('--start_train', default=800, type=int) # replay buffer size
+
 parser.add_argument('--num_iteration', default=100000, type=int) #  num of  games
-parser.add_argument('--batch_size', default=48, type=int) # mini batch size
+
 parser.add_argument('--seed', default=1, type=int)
 # optional parameters
 parser.add_argument('--num_hidden_layers', default=2, type=int)
 parser.add_argument('--sample_frequency', default=256, type=int)
 parser.add_argument('--activation', default='Relu', type=str)
 parser.add_argument('--render', default=False, type=bool) # show UI or not
-parser.add_argument('--log_interval', default=50, type=int) #
+parser.add_argument('--log_interval', default=20, type=int) #
 parser.add_argument('--load', default=False, type=bool) # load model
 parser.add_argument('--render_interval', default=100, type=int) # after render_interval, the env.render() will work
 parser.add_argument('--policy_noise', default=0.001, type=float)
-parser.add_argument('--noise_level', default=0.05, type=float)
 parser.add_argument('--noise_clip', default=0.03, type=float)
 parser.add_argument('--policy_delay', default=2, type=int)
 parser.add_argument('--exploration_noise', default=0.001, type=float)
 parser.add_argument('--max_episode', default=2000, type=int)
 parser.add_argument('--print_log', default=5, type=int)
 
+parser.add_argument('--align_sample', default=True, type=int)
+parser.add_argument('--more_embedding', default=True, type=int)
+
 
 
 
 
 # environment part hyper parameters
-parser.add_argument('--project_root',  default='/scr1/system/gamma-robot/', type=str) # project root path
-# parser.add_argument('--project_root',  default='/juno/u/qiangzhang/system/gamma-robot/', type=str) # project root path
-parser.add_argument('--test_id',  default=1156, type=int) #  1000+ means debug
+
 parser.add_argument('--gui',  default=True, type=int) #
 parser.add_argument('--video_id',  default=6, type=int) #
 
@@ -76,7 +88,7 @@ parser.add_argument('--add_motion',  default=True, type=int) #
 
 
 # video prediction part hyper parameters
-parser.add_argument('--action_id',  default=45, type=int) #
+parser.add_argument('--action_id',  default=107, type=int) #
 parser.add_argument('--cut_frame_num',  default=20, type=int) #
 parser.add_argument('--give_reward_num',  default=1, type=int) #
 parser.add_argument('--video_reward',  default=True, type=int) #
@@ -104,6 +116,7 @@ parser.add_argument('--load_cycle', default=None, type=object) #
 # environment action using cycle module hyperparameters
 parser.add_argument('--use_embedding',  default=True, type=int) #
 parser.add_argument('--load_embedding', default=None, type=object) #
+parser.add_argument('--embedding_dim', default=2, type=int) #
 
 
 opt = parser.parse_args()

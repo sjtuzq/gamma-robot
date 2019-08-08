@@ -16,6 +16,7 @@ from Dmp.gamma_dmp import DMP
 from Eval.gamma_pred import Frame_eval
 from Cycle.gamma_transfer import Frame_transfer
 from Solver.TD3 import TD3
+from Solver.TD3_embedding import TD3_embedding
 import Envs.bullet_client as bc
 
 
@@ -56,17 +57,23 @@ def main ():
     max_action = env.action_space['high'][0]
     min_Val = torch.tensor (1e-7).float ().to (device)  # min value
 
-    agent = TD3 (state_dim, action_dim, max_action, env.log_root, opt)
+    if opt.use_embedding:
+        agent = TD3_embedding (state_dim, action_dim, max_action, env.log_root, opt)
+    else:
+        agent = TD3 (state_dim, action_dim, max_action, env.log_root, opt)
     ep_r = 0
 
     if opt.mode == 'test':
-        agent.load ()
+        agent.load (1000)
         for i in range (opt.iteration):
             state = env.reset ()
             for t in range (100):
                 action = agent.select_action (state)
                 next_state, reward, done, info = env.step (np.float32 (action))
-                ep_r += reward
+                # if opt.use_embedding:
+                #     ep_r += reward[np.where (next_state[0] == 1)[0][0]]
+                # else:
+                #     ep_r += reward
                 # env.render ()
                 if done or t == 2000:
                     print ("Ep_i \t{}, the ep_r is \t{:0.2f}, the step is \t{}".format (i, ep_r, t))
@@ -89,16 +96,21 @@ def main ():
                 print('epoch id:{}, action:{}'.format(i,str(action)))
                 next_state, reward, done, info = env.step (action)
 
-                ep_r += reward
+                if opt.use_embedding:
+                    ep_r += reward[np.where(next_state[0]==1)[0][0]]
+                else:
+                    ep_r += reward
+
                 # if opt.render and i >= opt.render_interval : env.render()
                 agent.memory.push ((state, next_state, action, reward, np.float (done)))
-                if reward>0:
+                if ep_r>0:
                     for push_t in range(4):
                         agent.memory.push ((state, next_state, action, reward, np.float (done)))
                 if i + 1 % 10 == 0:
                     print ('Episode {},  The memory size is {} '.format (i, len (agent.memory.storage)))
                 if len (agent.memory.storage) >= opt.start_train - 1:
                     agent.update (opt.update_time)
+                    opt.noise_level = opt.noise_training_level
 
                 state = next_state
                 if done or t == opt.max_episode - 1:
@@ -109,7 +121,7 @@ def main ():
                     break
 
             if i % opt.log_interval == 0:
-                agent.save ()
+                agent.save (i)
 
     else:
         raise NameError ("mode wrong!!!")
