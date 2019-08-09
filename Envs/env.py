@@ -405,12 +405,18 @@ class Engine:
         if self.opt.use_embedding:
             action_p = random.random ()
 
-            if action_p < 0.5:
-                self.action_embedding = np.array([1,0])
-                self.opt.load_embedding = 45  # action 45: move sth up
-            else:
-                self.action_embedding = np.array ([0, 1])
-                self.opt.load_embedding = 43  # action 43: move sth down
+            action_p = int(action_p*self.opt.embedding_dim)
+
+            self.action_embedding = np.array([0]*self.opt.embedding_dim)
+            self.action_embedding[action_p] = 1
+            self.opt.load_embedding = self.opt.embedding_list[action_p]
+
+            # if action_p < 0.5:
+            #     self.action_embedding = np.array([1,0])
+            #     self.opt.load_embedding = self.opt.embedding_list[0]  # action 45: move sth up
+            # else:
+            #     self.action_embedding = np.array ([0, 1])
+            #     self.opt.load_embedding = self.opt.embedding_list[1]  # action 43: move sth down
 
         if self.opt.use_embedding:
             self.observation = [self.action_embedding, observation]
@@ -430,7 +436,7 @@ class Engine:
     def step_dmp(self,action):
         action = action.squeeze()
 
-        # init_pos = self.start_pos
+        init_pos = self.start_pos
 
         if self.opt.use_embedding:
             self.info += 'target:{}\n'.format(str(self.action_embedding))
@@ -480,11 +486,14 @@ class Engine:
             self.observation = dmp_observations[0][0]
 
 
-
         reward = dmp_observations[-1][1]
 
-        # end_pos = p.getLinkState (self.robotId, 7)[0]
+        end_pos = p.getLinkState (self.robotId, 7)[0]
         # reward = [end_pos[2] - init_pos[2],init_pos[2] - end_pos[2]]
+
+        # if self.opt.embedding_list == [86,45] and (not self.opt.video_reward):
+        #     reward = [init_pos[1] - end_pos[1],end_pos[2] - init_pos[2]]
+        #     reward = [reward[0]-abs(reward[1])*0.3,reward[1]-abs(reward[0])*0.3]
 
         self.info += 'total reward: {}\n\n'.format (reward)
 

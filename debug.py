@@ -64,7 +64,7 @@ def main ():
     ep_r = 0
 
     if opt.mode == 'test':
-        agent.load (1000)
+        agent.load (900)
         for i in range (opt.iteration):
             state = env.reset ()
             for t in range (100):

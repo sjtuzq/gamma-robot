@@ -60,11 +60,6 @@ class Frame_eval:
             prob,pred = prob[0],pred[0]
             trn_rank = np.argwhere (pred == self.class_label).squeeze () + 1
             trn_reward = prob[np.argwhere (pred == self.class_label).squeeze ()]
-
-            rank43 = np.argwhere (pred == 43).squeeze () + 1
-            rank45 = np.argwhere (pred == 45).squeeze () + 1
-
-            print ('label:{}  rank43:{}  rank45:{}'.format (self.class_label, rank43, rank45))
             return trn_rank,trn_reward
 
         else:
@@ -77,17 +72,19 @@ class Frame_eval:
             # reward = output[self.class_label] * 173 - 1
             # reward = F.sigmoid (torch.tensor (reward).float ()) - 0.5
 
-            # rank43 = np.argwhere (output_index == 43).squeeze () + 1
-            # rank45 = np.argwhere (output_index == 45).squeeze () + 1
-
             if self.opt.use_embedding:
-                reward43 = F.sigmoid (torch.tensor (output[43] * 173).float ()) - F.sigmoid (torch.tensor (1).float ())
-                reward45 = F.sigmoid (torch.tensor (output[45] * 173).float ()) - F.sigmoid (torch.tensor (1).float ())
-                reward = [reward45,reward43]
-
-                reward = [reward45*(reward45-reward43),reward43*(reward43-reward45)]
-
-            # print('label:{}  rank43:{}  rank45:{}'.format(self.class_label,rank43,rank45))
+                # reward1 = F.sigmoid (torch.tensor (output[self.opt.embedding_list[0]] * 173).float ()) - F.sigmoid (torch.tensor (1).float ())
+                # reward2 = F.sigmoid (torch.tensor (output[self.opt.embedding_list[1]] * 173).float ()) - F.sigmoid (torch.tensor (1).float ())
+                # reward = [reward1,reward2]
+                # reward = [reward1*abs(reward1-reward2),reward2*abs(reward2-reward1)]
+                reward = []
+                for i in range(self.opt.embedding_dim):
+                    action_reward = F.sigmoid (torch.tensor (output[self.opt.embedding_list[i]] * 173).float ()) \
+                                    - F.sigmoid (torch.tensor (1).float ())
+                    reward.append(action_reward)
+                reward_mean = float(sum(reward))/self.opt.embedding_dim
+                for i in range (self.opt.embedding_dim):
+                    reward[i] = reward[i]*abs(reward[i]-reward_mean)*self.opt.embedding_dim
             return rank,reward
 
     # def eval(self):

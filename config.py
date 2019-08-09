@@ -13,12 +13,12 @@ parser = argparse.ArgumentParser()
 
 # frequently used parameters
 parser.add_argument('--capacity', default=5000, type=int) # replay buffer size
-parser.add_argument('--start_train', default=800, type=int) # replay buffer size
+parser.add_argument('--start_train', default=1600, type=int) # replay buffer size
 parser.add_argument('--learning_rate', default=0.0001, type=float)
 parser.add_argument('--noise_level', default=0.5, type=float)
 parser.add_argument('--noise_training_level', default=0.05, type=float)
-parser.add_argument('--batch_size', default=16, type=int) # mini batch size
-parser.add_argument('--test_id',  default=2001, type=int) #  1000+ means debug
+parser.add_argument('--batch_size', default=48, type=int) # mini batch size
+parser.add_argument('--test_id',  default=2000, type=int) #  1000+ means debug
 parser.add_argument('--project_root',  default='/scr1/system/gamma-robot/', type=str) # project root path
 # parser.add_argument('--project_root',  default='/juno/u/qiangzhang/system/gamma-robot/', type=str) # project root path
 
@@ -60,8 +60,7 @@ parser.add_argument('--more_embedding', default=True, type=int)
 
 
 # environment part hyper parameters
-
-parser.add_argument('--gui',  default=True, type=int) #
+parser.add_argument('--gui',  default=False, type=int) #
 parser.add_argument('--video_id',  default=6, type=int) #
 
 parser.add_argument('--object_id',  default='nut', type=str) #
@@ -88,7 +87,7 @@ parser.add_argument('--add_motion',  default=True, type=int) #
 
 
 # video prediction part hyper parameters
-parser.add_argument('--action_id',  default=107, type=int) #
+parser.add_argument('--action_id',  default=3000, type=int) #
 parser.add_argument('--cut_frame_num',  default=20, type=int) #
 parser.add_argument('--give_reward_num',  default=1, type=int) #
 parser.add_argument('--video_reward',  default=True, type=int) #
@@ -108,16 +107,17 @@ parser.add_argument('--dmp_imitation', default=False, type=int) #
 parser.add_argument('--actions_root', default='/scr1/system/beta-robot/dataset/actions', type=str) #
 
 
-# environment action using cycle module hyperparameters
-parser.add_argument('--use_cycle',  default=False, type=int) #
-parser.add_argument('--load_cycle', default=None, type=object) #
 
-
-# environment action using cycle module hyperparameters
+# environment action using embedding module hyperparameters
 parser.add_argument('--use_embedding',  default=True, type=int) #
+parser.add_argument('--embedding_list',  default=[43,45], type=int) #
 parser.add_argument('--load_embedding', default=None, type=object) #
 parser.add_argument('--embedding_dim', default=2, type=int) #
 
+
+# environment action using cycle module hyperparameters
+parser.add_argument('--use_cycle',  default=False, type=int) #
+parser.add_argument('--load_cycle', default=None, type=object) #
 
 opt = parser.parse_args()
 

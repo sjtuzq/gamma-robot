@@ -30,10 +30,11 @@ class Replay_buffer ():
     Expects tuples of (state, next_state, action, reward, done)
     '''
 
-    def __init__ (self, max_size):
+    def __init__ (self, max_size,opt=None):
         self.storage = []
         self.max_size = max_size
         self.ptr = 0
+        self.opt = opt
 
     def push (self, data):
         if len (self.storage) == self.max_size:
@@ -62,7 +63,7 @@ class Replay_buffer ():
             r).reshape (-1, 1), np.array (d).reshape (-1, 1)
 
     def align_sample (self, batch_size):
-        ind = np.random.randint (0, len (self.storage), size=int(batch_size/2))
+        ind = np.random.randint (0, len (self.storage), size=int(batch_size/self.opt.embedding_dim))
         x_embedding, x, y_embedding, y, u, r, d = [], [], [], [], [], [], []
 
         for i in ind:
@@ -78,15 +79,20 @@ class Replay_buffer ():
             d.append (np.array (D, copy=False))
 
             # conjugated sample
-            x_embedding.append (np.array (1-X[0], copy=False))
-            x.append (np.array (X[1], copy=False))
+            for conj_id in np.where(Y[0]==0)[0]:
+                conj_X = np.zeros_like(X[0])
+                conj_X[conj_id] = 1
+                x_embedding.append (np.array (conj_X, copy=False))
+                x.append (np.array (X[1], copy=False))
 
-            y_embedding.append (np.array (1-Y[0], copy=False))
-            y.append (np.array (Y[1], copy=False))
+                conj_Y = np.zeros_like (Y[0])
+                conj_Y[conj_id] = 1
+                y_embedding.append (np.array (conj_Y, copy=False))
+                y.append (np.array (Y[1], copy=False))
 
-            u.append (np.array (U, copy=False))
-            r.append (np.array (R[np.where(Y[0]==0)[0][0]], copy=False))
-            d.append (np.array (D, copy=False))
+                u.append (np.array (U, copy=False))
+                r.append (np.array (R[conj_id], copy=False))
+                d.append (np.array (D, copy=False))
 
         return np.array (x_embedding), np.array (x), np.array (y_embedding), np.array (y), np.array (u), np.array (
             r).reshape (-1, 1), np.array (d).reshape (-1, 1)
@@ -199,7 +205,7 @@ class TD3_embedding ():
         self.critic_2_target.load_state_dict (self.critic_2.state_dict ())
 
         self.max_action = max_action
-        self.memory = Replay_buffer (self.args.capacity)
+        self.memory = Replay_buffer (self.args.capacity,self.args)
         self.writer = SummaryWriter (self.directory)
         self.num_critic_update_iteration = 0
         self.num_actor_update_iteration = 0
