@@ -16,7 +16,7 @@ farmers = ["Farmer Joe", "Upland Bros.", "Smith Gardening",
 #                     [1.3, 1.2, 0.0, 0.0, 0.0, 3.2, 5.1],
 #                     [0.1, 2.0, 0.0, 1.4, 0.0, 1.9, 6.3]])
 
-harvest = np.load('logs/reward_data_26.npy')
+harvest = np.load('logs/reward_data_29.npy')
 
 fig, ax = plt.subplots()
 im = ax.imshow(harvest)

@@ -64,10 +64,14 @@ def main ():
     ep_r = 0
 
     if opt.mode == 'test':
-        agent.load (900)
+        agent.load (2000)
         for i in range (opt.iteration):
             state = env.reset ()
             for t in range (100):
+
+                # state[0] = np.array ([0.5, 0.5, 0.5, 0.5])
+                # action = agent.select_action (state)
+
                 action = agent.select_action (state)
                 next_state, reward, done, info = env.step (np.float32 (action))
                 # if opt.use_embedding:

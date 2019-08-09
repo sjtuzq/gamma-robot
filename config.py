@@ -13,12 +13,12 @@ parser = argparse.ArgumentParser()
 
 # frequently used parameters
 parser.add_argument('--capacity', default=5000, type=int) # replay buffer size
-parser.add_argument('--start_train', default=1600, type=int) # replay buffer size
+parser.add_argument('--start_train', default=800, type=int) # replay buffer size
 parser.add_argument('--learning_rate', default=0.0001, type=float)
 parser.add_argument('--noise_level', default=0.5, type=float)
 parser.add_argument('--noise_training_level', default=0.05, type=float)
-parser.add_argument('--batch_size', default=48, type=int) # mini batch size
-parser.add_argument('--test_id',  default=2000, type=int) #  1000+ means debug
+parser.add_argument('--batch_size', default=12, type=int) # mini batch size
+parser.add_argument('--test_id',  default=31, type=int) #  1000+ means debug
 parser.add_argument('--project_root',  default='/scr1/system/gamma-robot/', type=str) # project root path
 # parser.add_argument('--project_root',  default='/juno/u/qiangzhang/system/gamma-robot/', type=str) # project root path
 
@@ -49,7 +49,7 @@ parser.add_argument('--policy_noise', default=0.001, type=float)
 parser.add_argument('--noise_clip', default=0.03, type=float)
 parser.add_argument('--policy_delay', default=2, type=int)
 parser.add_argument('--exploration_noise', default=0.001, type=float)
-parser.add_argument('--max_episode', default=2000, type=int)
+parser.add_argument('--max_episode', default=2003, type=int)
 parser.add_argument('--print_log', default=5, type=int)
 
 parser.add_argument('--align_sample', default=True, type=int)
@@ -110,9 +110,9 @@ parser.add_argument('--actions_root', default='/scr1/system/beta-robot/dataset/a
 
 # environment action using embedding module hyperparameters
 parser.add_argument('--use_embedding',  default=True, type=int) #
-parser.add_argument('--embedding_list',  default=[43,45], type=int) #
+parser.add_argument('--embedding_list',  default=[86,94,43,45], type=int) #
 parser.add_argument('--load_embedding', default=None, type=object) #
-parser.add_argument('--embedding_dim', default=2, type=int) #
+parser.add_argument('--embedding_dim', default=4, type=int) #
 
 
 # environment action using cycle module hyperparameters
