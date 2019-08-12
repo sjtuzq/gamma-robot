@@ -13,12 +13,12 @@ parser = argparse.ArgumentParser()
 
 # frequently used parameters
 parser.add_argument('--capacity', default=5000, type=int) # replay buffer size
-parser.add_argument('--start_train', default=800, type=int) # replay buffer size
+parser.add_argument('--start_train', default=1600, type=int) # replay buffer size
 parser.add_argument('--learning_rate', default=0.0001, type=float)
 parser.add_argument('--noise_level', default=0.5, type=float)
 parser.add_argument('--noise_training_level', default=0.05, type=float)
-parser.add_argument('--batch_size', default=12, type=int) # mini batch size
-parser.add_argument('--test_id',  default=31, type=int) #  1000+ means debug
+parser.add_argument('--batch_size', default=48, type=int) # mini batch size
+parser.add_argument('--test_id',  default=2086, type=int) #  1000+ means debug
 parser.add_argument('--project_root',  default='/scr1/system/gamma-robot/', type=str) # project root path
 # parser.add_argument('--project_root',  default='/juno/u/qiangzhang/system/gamma-robot/', type=str) # project root path
 
@@ -42,7 +42,7 @@ parser.add_argument('--num_hidden_layers', default=2, type=int)
 parser.add_argument('--sample_frequency', default=256, type=int)
 parser.add_argument('--activation', default='Relu', type=str)
 parser.add_argument('--render', default=False, type=bool) # show UI or not
-parser.add_argument('--log_interval', default=20, type=int) #
+parser.add_argument('--log_interval', default=200, type=int) #
 parser.add_argument('--load', default=False, type=bool) # load model
 parser.add_argument('--render_interval', default=100, type=int) # after render_interval, the env.render() will work
 parser.add_argument('--policy_noise', default=0.001, type=float)
@@ -60,7 +60,7 @@ parser.add_argument('--more_embedding', default=True, type=int)
 
 
 # environment part hyper parameters
-parser.add_argument('--gui',  default=False, type=int) #
+parser.add_argument('--gui',  default=True, type=int) #
 parser.add_argument('--video_id',  default=6, type=int) #
 
 parser.add_argument('--object_id',  default='nut', type=str) #
@@ -87,7 +87,7 @@ parser.add_argument('--add_motion',  default=True, type=int) #
 
 
 # video prediction part hyper parameters
-parser.add_argument('--action_id',  default=3000, type=int) #
+parser.add_argument('--action_id',  default=6000, type=int) #
 parser.add_argument('--cut_frame_num',  default=20, type=int) #
 parser.add_argument('--give_reward_num',  default=1, type=int) #
 parser.add_argument('--video_reward',  default=True, type=int) #
@@ -96,6 +96,7 @@ parser.add_argument('--add_mask',  default=True, type=int) #
 parser.add_argument('--prob_softmax',  default=False, type=int) #
 parser.add_argument('--merge_class',  default=True, type=int) #
 parser.add_argument('--use_trn',  default=False, type=int) #
+parser.add_argument('--use_refine_baseline',  default=False, type=int) #
 
 
 # environment action using DMP part hyperparameters
@@ -110,7 +111,8 @@ parser.add_argument('--actions_root', default='/scr1/system/beta-robot/dataset/a
 
 # environment action using embedding module hyperparameters
 parser.add_argument('--use_embedding',  default=True, type=int) #
-parser.add_argument('--embedding_list',  default=[86,94,43,45], type=int) #
+parser.add_argument('--nlp_embedding',  default=True, type=int) #
+parser.add_argument('--embedding_list',  default=[86,87,93,94], type=int) #
 parser.add_argument('--load_embedding', default=None, type=object) #
 parser.add_argument('--embedding_dim', default=4, type=int) #
 
@@ -120,6 +122,9 @@ parser.add_argument('--use_cycle',  default=False, type=int) #
 parser.add_argument('--load_cycle', default=None, type=object) #
 
 opt = parser.parse_args()
-
+if opt.nlp_embedding:
+    opt.embedding_dim = 1024
+else:
+    opt.embedding_dim = len(opt.embedding_list)
 
 

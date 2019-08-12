@@ -67,6 +67,13 @@ class Engine41(Engine):
 
         self.start_pos = p.getLinkState (self.robotId, 7)[0]
 
+        if self.opt.rand_box == 'rand':
+            pos = p.getLinkState (self.robotId, 7)[0]
+            up_traj = point2traj ([pos, [pos[0]+(random.random()-0.5)*0.3, pos[1] + (random.random()-0.5)*0.3, pos[2] + (random.random()-0.5)*0.3]])
+            start_id = self.move (up_traj, orn_traj, start_id)
+
+        self.start_pos = p.getLinkState (self.robotId, 7)[0]
+
     def get_handcraft_reward (self):
         distance = sum ([(x - y) ** 2 for x, y in zip (self.start_pos, self.target_pos)]) ** 0.5
         box = p.getAABB (self.box_id, -1)

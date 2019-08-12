@@ -74,14 +74,14 @@ class Frame_eval:
 
             if self.opt.use_embedding:
                 reward = []
-                for i in range(self.opt.embedding_dim):
+                for i in range(len(self.opt.embedding_list)):
                     action_reward = F.sigmoid (torch.tensor (output[self.opt.embedding_list[i]] * 173).float ()) \
                                     - F.sigmoid (torch.tensor (1).float ())
                     reward.append(action_reward)
 
                 reward_mean = float(sum(reward))/self.opt.embedding_dim
-                for i in range (self.opt.embedding_dim):
-                    reward[i] = reward[i]*abs(reward[i]-reward_mean)*self.opt.embedding_dim
+                for i in range (len(self.opt.embedding_list)):
+                    reward[i] = reward[i]*abs(reward[i]-reward_mean)*len(self.opt.embedding_list)
 
             return rank,reward
 

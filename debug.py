@@ -69,9 +69,6 @@ def main ():
             state = env.reset ()
             for t in range (100):
 
-                # state[0] = np.array ([0.5, 0.5, 0.5, 0.5])
-                # action = agent.select_action (state)
-
                 action = agent.select_action (state)
                 next_state, reward, done, info = env.step (np.float32 (action))
                 # if opt.use_embedding:
@@ -101,7 +98,8 @@ def main ():
                 next_state, reward, done, info = env.step (action)
 
                 if opt.use_embedding:
-                    ep_r += reward[np.where(next_state[0]==1)[0][0]]
+                    reward_id = np.where(np.array(env.opt.embedding_list) == env.opt.load_embedding)[0][0]
+                    ep_r += reward[reward_id]
                 else:
                     ep_r += reward
 

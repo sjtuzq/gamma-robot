@@ -117,7 +117,7 @@ class Robot:
                                                       lowerLimits=self.ll,
                                                       upperLimits=self.ul,
                                                       jointRanges=self.jr,
-                                                      restPoses=null_pose,
+                                                      # restPoses=null_pose,
                                                       jointDamping=self.jd)[:self.num_controlled_joints]
 
         self.p.setJointMotorControlArray(bodyIndex=self.robotId,

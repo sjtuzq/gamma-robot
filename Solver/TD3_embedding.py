@@ -35,6 +35,9 @@ class Replay_buffer ():
         self.max_size = max_size
         self.ptr = 0
         self.opt = opt
+        self.embedding_data = np.load (
+            os.path.join (self.opt.project_root,'scripts', 'utils',
+                          'labels', 'label_embedding_uncased.npy'))
 
     def push (self, data):
         if len (self.storage) == self.max_size:
@@ -56,14 +59,19 @@ class Replay_buffer ():
             y.append (np.array (Y[1], copy=False))
 
             u.append (np.array (U, copy=False))
-            r.append (np.array (R[np.where(Y[0]==1)[0][0]], copy=False))
+            if self.opt.nlp_embedding:
+                reward_id = np.where ((Y[0] == self.embedding_data).sum (1) == 1024)[0][0]
+                reward_id = np.where(np.array(self.opt.embedding_list) == reward_id)[0][0]
+                r.append (np.array (R[reward_id], copy=False))
+            else:
+                r.append (np.array (R[np.where(Y[0]==1)[0][0]], copy=False))
             d.append (np.array (D, copy=False))
 
         return np.array (x_embedding), np.array (x), np.array (y_embedding), np.array (y), np.array (u), np.array (
             r).reshape (-1, 1), np.array (d).reshape (-1, 1)
 
     def align_sample (self, batch_size):
-        ind = np.random.randint (0, len (self.storage), size=int(batch_size/self.opt.embedding_dim))
+        ind = np.random.randint (0, len (self.storage), size=int(batch_size/len(self.opt.embedding_list)))
         x_embedding, x, y_embedding, y, u, r, d = [], [], [], [], [], [], []
 
         for i in ind:
@@ -75,24 +83,49 @@ class Replay_buffer ():
             y.append (np.array (Y[1], copy=False))
 
             u.append (np.array (U, copy=False))
-            r.append (np.array (R[np.where(Y[0]==1)[0][0]], copy=False))
-            d.append (np.array (D, copy=False))
-
-            # conjugated sample
-            for conj_id in np.where(Y[0]==0)[0]:
-                conj_X = np.zeros_like(X[0])
-                conj_X[conj_id] = 1
-                x_embedding.append (np.array (conj_X, copy=False))
-                x.append (np.array (X[1], copy=False))
-
-                conj_Y = np.zeros_like (Y[0])
-                conj_Y[conj_id] = 1
-                y_embedding.append (np.array (conj_Y, copy=False))
-                y.append (np.array (Y[1], copy=False))
-
-                u.append (np.array (U, copy=False))
-                r.append (np.array (R[conj_id], copy=False))
+            if self.opt.nlp_embedding:
+                reward_id_for_action = np.where ((Y[0] == self.embedding_data).sum (1) == 1024)[0][0]
+                reward_id = np.where (np.array (self.opt.embedding_list) == reward_id_for_action)[0][0]
+                r.append (np.array (R[reward_id], copy=False))
                 d.append (np.array (D, copy=False))
+
+                # conjugated sample
+                for conj_id in self.opt.embedding_list:
+                    if conj_id == reward_id_for_action:
+                        continue
+                    align_id_for_action = conj_id
+                    align_embedding = self.embedding_data[align_id_for_action]
+                    x_embedding.append (np.array (align_embedding, copy=False))
+                    x.append (np.array (X[1], copy=False))
+
+                    align_id_for_action = conj_id
+                    align_embedding = self.embedding_data[align_id_for_action]
+                    y_embedding.append (np.array (align_embedding, copy=False))
+                    y.append (np.array (Y[1], copy=False))
+
+                    u.append (np.array (U, copy=False))
+                    reward_id = np.where (np.array (self.opt.embedding_list) == align_id_for_action)[0][0]
+                    r.append (np.array (R[reward_id], copy=False))
+                    d.append (np.array (D, copy=False))
+            else:
+                r.append (np.array (R[np.where (Y[0] == 1)[0][0]], copy=False))
+                d.append (np.array (D, copy=False))
+
+                # conjugated sample
+                for conj_id in np.where (Y[0] == 0)[0]:
+                    conj_X = np.zeros_like (X[0])
+                    conj_X[conj_id] = 1
+                    x_embedding.append (np.array (conj_X, copy=False))
+                    x.append (np.array (X[1], copy=False))
+
+                    conj_Y = np.zeros_like (Y[0])
+                    conj_Y[conj_id] = 1
+                    y_embedding.append (np.array (conj_Y, copy=False))
+                    y.append (np.array (Y[1], copy=False))
+
+                    u.append (np.array (U, copy=False))
+                    r.append (np.array (R[conj_id], copy=False))
+                    d.append (np.array (D, copy=False))
 
         return np.array (x_embedding), np.array (x), np.array (y_embedding), np.array (y), np.array (u), np.array (
             r).reshape (-1, 1), np.array (d).reshape (-1, 1)

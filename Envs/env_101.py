@@ -96,16 +96,19 @@ class Engine101(Engine):
                 start_id = self.move (up_traj, orn_traj, start_id)
 
         if self.opt.rand_box == 'rand':
-            self.box_file = os.path.join(self.env_root,"urdf/openbox/openbox.urdf")
-            self.box_position = [0.45+(random.random()-0.5)*0.2, -0.1+(random.random()-0.5)*0.4, 0.34]
-            self.box_scaling = 0.0003
-            self.box_orientation = p.getQuaternionFromEuler ([0, 0, 0])
-            self.box_id = p.loadURDF (fileName=self.box_file, basePosition=self.box_position,
-                                      baseOrientation=self.box_orientation,
-                                      globalScaling=self.box_scaling)#, physicsClientId=self.physical_id)
+            self.box_file = os.path.join(self.env_root,"urdf/objmodels/urdfs/cup.urdf")
+            self.box_position = [0.42+(random.random()-0.5)*0.2, 0.03+(random.random()-0.5)*0.4, 0.30]
+            self.box_scaling = 0.15
+            self.box_orientation = self.p.getQuaternionFromEuler([-math.pi/2, 0, 0])
+            try:
+                self.p.resetBasePositionAndOrientation (self.box_id, self.box_position, self.box_orientation)
+            except:
+                self.box_id = self.p.loadURDF (fileName=self.box_file, basePosition=self.box_position,
+                                               baseOrientation=self.box_orientation,
+                                               globalScaling=self.box_scaling)
         else:
             self.box_file = os.path.join(self.env_root,"urdf/objmodels/urdfs/cup.urdf")
-            self.box_position = [0.42, 0.03, 0.30]
+            self.box_position = [0.42, 0.13, 0.33]
             self.box_orientation = self.p.getQuaternionFromEuler([-math.pi/2, 0, 0])
             self.box_scaling = 0.15
             try:

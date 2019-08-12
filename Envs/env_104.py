@@ -93,9 +93,9 @@ class Engine104(Engine):
 
         if self.opt.rand_box == 'rand':
             self.box_file = os.path.join(self.env_root,"urdf/openbox/openbox.urdf")
-            self.box_position = [0.45+(random.random()-0.5)*0.2, -0.1+(random.random()-0.5)*0.4, 0.34]
-            self.box_scaling = 0.0003
-            self.box_orientation = p.getQuaternionFromEuler ([0, 0, 0])
+            self.box_position = [0.42+(random.random()-0.5)*0.2, 0.00+(random.random()-0.5)*0.4, 0.34]
+            self.box_scaling = 0.00037
+            self.box_orientation = p.getQuaternionFromEuler ([0, 0, math.pi/2])
             self.box_id = p.loadURDF (fileName=self.box_file, basePosition=self.box_position,
                                       baseOrientation=self.box_orientation,
                                       globalScaling=self.box_scaling)#, physicsClientId=self.physical_id)

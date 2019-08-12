@@ -35,7 +35,7 @@ class Engine15(Engine):
         self.opt = opt 
         self._wid = worker_id
         self.physical_id = opt.p
-        self.robot.gripperMaxForce = 200.0
+        self.robot.gripperMaxForce = 2000.0
         self.robot.armMaxForce = 200.0
         self.robot.jd = [0.01] * 14
         self.opt.p.setPhysicsEngineParameter (constraintSolverType=self.opt.p.CONSTRAINT_SOLVER_LCP_DANTZIG,
@@ -74,7 +74,7 @@ class Engine15(Engine):
         self.p.resetBasePositionAndOrientation(self.obj_id,[0.3637 + 0.06, -0.05, 0.3515],[0, 0, -0.1494381, 0.9887711])
         self.p.resetBasePositionAndOrientation(self.obj2_id,[0.3637, 0.05, 0.3215],[0, 0, -0.1494381, 0.9887711])
   
-        obj_friction_ceof = 0.3
+        obj_friction_ceof = 1000
         self.p.changeDynamics(self.obj_id, -1, mass=0.9)
         self.p.changeDynamics(self.obj_id, -1, lateralFriction=obj_friction_ceof)
         self.p.changeDynamics(self.obj_id, -1, rollingFriction=obj_friction_ceof)
@@ -112,7 +112,7 @@ class Engine15(Engine):
         num_q = len(qlist[0])
 
         for i in range(40,len(qlist),1):
-            glist[i] = min(130,glist[i])
+            glist[i] = min(135,glist[i])
             self.robot.jointPositionControl(qlist[i],gripper=glist[i])
  
         self.fix_orn = p.getLinkState(self.robotId, 7)[1]

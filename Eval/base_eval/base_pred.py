@@ -49,7 +49,10 @@ class Base_eval:
         # multi GPU setting
         self.model = torch.nn.DataParallel (self.model, self.device_ids).to (self.device)
 
-        save_dir = os.path.join (os.path.join (self.root, "trained_models/pretrained/" + self.config['model_name']))
+        if self.opt.use_refine_baseline:
+            save_dir = os.path.join (os.path.join (self.root, "trained_models/pretrained/" + "refined"))
+        else:
+            save_dir = os.path.join (os.path.join (self.root, "trained_models/pretrained/" + self.config['model_name']))
         checkpoint_path = os.path.join (save_dir, 'model_best.pth.tar')
 
         checkpoint = torch.load (checkpoint_path)
@@ -118,6 +121,7 @@ if __name__ == "__main__":
     epoch_id = 0
     filepath = '/scr1/system/gamma-robot/logs/td3_log/test{}/epoch-{}'.format (test_id,epoch_id)
     filepath = '/scr1/system/beta-robot/dataset/actions/{}-4/frames'.format(video_id)
+
 
     output, output_index = agent.get_baseline_reward (filepath)
 

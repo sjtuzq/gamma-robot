@@ -61,6 +61,7 @@ class Engine:
 
         self.env_root = os.path.join(opt.project_root,'scripts','Envs')
         self.script_root = os.path.join(opt.project_root,'scripts')
+        self.embedding_data = np.load(os.path.join(self.script_root,'utils','labels','label_embedding_uncased.npy'))
         self.memory_path = safe_path(os.path.join(self.log_root,'memory'))
         backup_code (self.script_root, self.log_root)
 
@@ -283,6 +284,7 @@ class Engine:
             pos = pos_traj[i]
             orn = orn_traj[i]
             self.robot.operationSpacePositionControl(pos=pos,orn=orn,null_pose=self.data_q[i])
+            # self.robot.operationSpacePositionControl(pos=pos,orn=orn)
 
             img_info = p.getCameraImage (width=self.w,
                                          height=self.h,
@@ -368,6 +370,19 @@ class Engine:
             index_ = self.robot.activeGripperJointIndexList[j]
             p.resetJointState (self.robotId, index_, 0, 0)
 
+        if self.opt.use_embedding:
+            action_p = random.random ()
+
+            action_p = int(action_p*len(self.opt.embedding_list))
+
+            if self.opt.nlp_embedding:
+                self.opt.load_embedding = self.opt.embedding_list[action_p]
+                self.action_embedding = self.embedding_data[self.opt.load_embedding]
+            else:
+                self.action_embedding = np.array([0]*self.opt.embedding_dim)
+                self.action_embedding[action_p] = 1
+                self.opt.load_embedding = self.opt.embedding_list[action_p]
+
         self.init_grasp ()
 
         img_info = p.getCameraImage (width=self.w,
@@ -402,21 +417,6 @@ class Engine:
         elif self.opt.observation == 'before_cnn':
             observation = np.array(observation)
 
-        if self.opt.use_embedding:
-            action_p = random.random ()
-
-            action_p = int(action_p*self.opt.embedding_dim)
-
-            self.action_embedding = np.array([0]*self.opt.embedding_dim)
-            self.action_embedding[action_p] = 1
-            self.opt.load_embedding = self.opt.embedding_list[action_p]
-
-            # if action_p < 0.5:
-            #     self.action_embedding = np.array([1,0])
-            #     self.opt.load_embedding = self.opt.embedding_list[0]  # action 45: move sth up
-            # else:
-            #     self.action_embedding = np.array ([0, 1])
-            #     self.opt.load_embedding = self.opt.embedding_list[1]  # action 43: move sth down
 
         if self.opt.use_embedding:
             self.observation = [self.action_embedding, observation]
@@ -459,8 +459,8 @@ class Engine:
         start_thresh = 0
         if self.opt.add_gripper and action[-1]>start_thresh:
             loose_num = 10
-            if self.opt.action_id >= 16 and self.opt.action_id <= 20:
-                loose_num = 5
+            # if self.opt.load_embedding >= 16 and self.opt.load_embedding <= 20:
+            #     loose_num = 5
 
         dmp_observations = []
         for step_id,small_action in enumerate(self.traj):
@@ -487,14 +487,6 @@ class Engine:
 
 
         reward = dmp_observations[-1][1]
-
-        end_pos = p.getLinkState (self.robotId, 7)[0]
-        # reward = [end_pos[2] - init_pos[2],init_pos[2] - end_pos[2]]
-
-        # if self.opt.embedding_list == [86,45] and (not self.opt.video_reward):
-        #     reward = [init_pos[1] - end_pos[1],end_pos[2] - init_pos[2]]
-        #     reward = [reward[0]-abs(reward[1])*0.3,reward[1]-abs(reward[0])*0.3]
-
         self.info += 'total reward: {}\n\n'.format (reward)
 
         done = True

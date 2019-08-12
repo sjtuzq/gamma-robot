@@ -41,17 +41,20 @@ class Distribution:
             bins.append(end_i)
         return count,bins
 
-    def show2(self):
+    def show2(self,var=0.5,id=0):
         start = -3
         end = 3
         show_bin_dim = 300
         plt.cla ()
-        s43 = self.sample_43 ()
-        s45 = self.sample_45 ()
+        s43 = self.sample_43 (sigma=var)
+        s45 = self.sample_45 (sigma=var)
         s = np.concatenate ((s43, s45), 0)
         count,bins = self.my_split(s,start,end,show_bin_dim)
         plt.plot (bins[:-1], count)
-        plt.show()
+        plt.xlim ([-2, 2])
+        plt.ylim ([0, 0.02])
+        # plt.show()
+        plt.savefig('./logs/before/before_{}.jpg'.format(id))
 
         count43,bins = self.my_split (s43, start, end, show_bin_dim)
         count45,bins = self.my_split (s45, start, end, show_bin_dim)
@@ -63,11 +66,13 @@ class Distribution:
             new_count43[i] = count43[i]*abs(count43[i]-count45[i])
             new_count45[i] = count45[i]*abs(count45[i]-count43[i])
 
+        new_count43_sum = new_count43.sum()
+        new_count45_sum = new_count45.sum()
         for i in range(show_bin_dim):
-            new_count43[i] /= new_count43.sum()
-            new_count45[i] /= new_count45.sum()
+            new_count43[i] /= new_count43_sum
+            new_count45[i] /= new_count45_sum
 
-        for repeat_t in range(7):
+        for repeat_t in range(1):
             tmp = []
             for i in range(show_bin_dim):
                 tmp.append(new_count43[i]+new_count45[i])
@@ -75,7 +80,10 @@ class Distribution:
 
             plt.cla()
             plt.plot(bins[:-1],count)
-            plt.show()
+            plt.xlim ([-2, 2])
+            plt.ylim ([0, 0.04])
+            # plt.show()
+            plt.savefig ('./logs/after/after_{}.jpg'.format (id))
 
             count43 = np.copy(new_count43)
             count45 = np.copy(new_count45)
@@ -84,9 +92,11 @@ class Distribution:
                 new_count43[i] = count43[i] * abs (count43[i] - count45[i])
                 new_count45[i] = count45[i] * abs (count45[i] - count43[i])
 
-            for i in range(show_bin_dim):
-                new_count43[i] /= new_count43.sum()
-                new_count45[i] /= new_count45.sum()
+            new_count43_sum = new_count43.sum ()
+            new_count45_sum = new_count45.sum ()
+            for i in range (show_bin_dim):
+                new_count43[i] /= new_count43_sum
+                new_count45[i] /= new_count45_sum
 
 
     def show3(self):
@@ -101,6 +111,7 @@ class Distribution:
         # count, bins, _ = plt.hist (s, show_bin_dim, normed=True)
         count,bins = self.my_split(s,start,end,show_bin_dim)
         plt.plot (bins[:-1], count)
+
         plt.show()
 
         # count43, bins43, _ = plt.hist (s43, show_bin_dim, normed=True)
@@ -119,12 +130,15 @@ class Distribution:
             new_count45[i] = count45[i]*abs(2*count45[i]-count43[i]-count47[i])
             new_count47[i] = count47[i]*abs(2*count47[i]-count43[i]-count45[i])
 
-        for i in range(show_bin_dim):
-            new_count43[i] /= new_count43.sum()
-            new_count45[i] /= new_count45.sum()
-            new_count47[i] /= new_count47.sum()
+        new_count43_sum = new_count43.sum ()
+        new_count45_sum = new_count45.sum ()
+        new_count47_sum = new_count47.sum ()
+        for i in range (show_bin_dim):
+            new_count43[i] /= new_count43_sum
+            new_count45[i] /= new_count45_sum
+            new_count47[i] /= new_count47_sum
 
-        for repeat_t in range(7):
+        for repeat_t in range(2):
             tmp = []
             for i in range(show_bin_dim):
                 tmp.append(new_count43[i]+new_count45[i]+new_count47[i])
@@ -142,14 +156,19 @@ class Distribution:
                 new_count45[i] = count45[i]*abs(2*count45[i]-count43[i]-count47[i])
                 new_count47[i] = count47[i]*abs(2*count47[i]-count43[i]-count45[i])
 
-            for i in range(show_bin_dim):
-                new_count43[i] /= new_count43.sum()
-                new_count45[i] /= new_count45.sum()
-                new_count47[i] /= new_count47.sum()
+            new_count43_sum = new_count43.sum ()
+            new_count45_sum = new_count45.sum ()
+            new_count47_sum = new_count47.sum ()
+            for i in range (show_bin_dim):
+                new_count43[i] /= new_count43_sum
+                new_count45[i] /= new_count45_sum
+                new_count47[i] /= new_count47_sum
 
 
 
 if __name__ == '__main__':
     agent = Distribution()
-    agent.show2()
-    agent.show3()
+    for i in range(50,150):
+        agent.show2(var=0.005*i,id=i)
+        print(i)
+    # agent.show3()

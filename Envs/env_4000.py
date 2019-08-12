@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """
-   env for action 3000: move sth up + down + pull sth from left to right + push sth from right to left
+   env for action 4000, consist of the following different tasks:
+   action 12: drop sth onto sth
+   action 16: hold sth
+   action 86: pull sth from left to right
+   action 94: push sth from right to left
+   action 43: move sth down
+   action 45: move sth up
 """
+
 #!/usr/bin/env python3
 
 import pybullet as p
@@ -27,9 +34,9 @@ egl = pkgutil.get_loader ('eglRenderer')
 
 from .env import Engine
 
-class Engine3000(Engine):
+class Engine4000(Engine):
     def __init__(self,opt):
-        super(Engine3000,self).__init__(opt)
+        super(Engine4000,self).__init__(opt)
 
     def init_grasp(self):
         try:

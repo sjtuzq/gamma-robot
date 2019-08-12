@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-   env for action 45: move sth up
-"""
+
 import pybullet as p
 import time
 import math
@@ -20,57 +18,99 @@ sys.path.append('./Eval')
 sys.path.append('./')
 from .utils import get_view,safe_path,cut_frame,point2traj,get_gripper_pos,backup_code
 
-
 import pkgutil
 egl = pkgutil.get_loader ('eglRenderer')
 
-
 from .env import Engine
 
-class Engine44(Engine):
+class Engine93(Engine):
     def __init__(self,opt):
-        super(Engine44,self).__init__(opt)
+        super(Engine93,self).__init__(opt)
 
     def init_grasp(self):
+        try:
+            p.removeBody(self.box_id)
+        except:
+            pass
+
         pos_traj = np.load (os.path.join (self.env_root, 'init', 'pos.npy'))
         orn_traj = np.load (os.path.join (self.env_root, 'init', 'orn.npy'))
         self.fix_orn = np.load (os.path.join (self.env_root, 'init', 'orn.npy'))
 
+        self.data_q = np.load (self.env_root + '/init/left_q.npy')
+        self.data_dq = np.load (self.env_root + '/init/left_dq.npy')
         for j in range (7):
             self.p.resetJointState(self.robotId, j, self.data_q[0][j], self.data_dq[0][j])
 
         self.robot.gripperControl(0)
 
+        orn_traj = np.array([p.getLinkState (self.robotId, 7)[1]]*orn_traj.shape[0])
+        self.fix_orn = np.array([p.getLinkState (self.robotId, 7)[1]]*orn_traj.shape[0])
+
+        self.obj_position = [0.4, -0.08, 0.34]
+        self.obj_scaling = 2
+        self.obj_orientation = self.p.getQuaternionFromEuler ([math.pi / 2, -math.pi / 2, 0])
+        self.p.resetBasePositionAndOrientation (self.obj_id, self.obj_position, self.obj_orientation)
+
+
         for init_t in range(100):
             box = p.getAABB(self.obj_id,-1)
             center = [(x+y)*0.5 for x,y in zip(box[0],box[1])]
-            center[0] -= 0.05
-            center[1] -= 0.05
-            center[2] += 0.03
+            center[0] -= 0.03
+            center[1] += 0.02
+            center[2] += 0.05
             # center = (box[0]+box[1])*0.5
         points = np.array ([pos_traj[0], center])
 
         start_id = 0
-        init_traj = point2traj(points)
-        start_id = self.move(init_traj,orn_traj,start_id)
+        pos = p.getLinkState (self.robotId, 7)[0]
+        up_traj = point2traj([pos, center])
+        start_id = self.move(up_traj, orn_traj,start_id)
+
+        # init_traj = point2traj(points)
+        # start_id = self.move(init_traj,orn_traj,start_id)
 
         # grasping
         grasp_stage_num = 10
         for grasp_t in range(grasp_stage_num):
-            gripperPos = grasp_t / float(grasp_stage_num) * 180.0
+            gripperPos = grasp_t / float(grasp_stage_num) * 220.0
             self.robot.gripperControl(gripperPos)
             start_id += 1
 
         pos = p.getLinkState (self.robotId, 7)[0]
-        up_traj = point2traj([pos, [pos[0]-0.15, pos[1]+0.13, pos[2]+0.25]])
+        up_traj = point2traj([pos, [pos[0], pos[1]+0.2, pos[2]+0.06]])
         start_id = self.move(up_traj, orn_traj,start_id)
 
-        if self.opt.rand_box == 'rand':
+        if self.opt.rand_start == 'rand':
+            # move in z-axis direction
             pos = p.getLinkState (self.robotId, 7)[0]
-            up_traj = point2traj ([pos, [pos[0]+(random.random()-0.5)*0.3, pos[1] + (random.random()-0.5)*0.3, pos[2] + (random.random()-0.5)*0.3]])
+            up_traj = point2traj([pos, [pos[0], pos[1], pos[2]+(random.random()-0.5)*0.1]])
+            start_id = self.move(up_traj, orn_traj,start_id)
+
+            # move in y-axis direction
+            pos = p.getLinkState (self.robotId, 7)[0]
+            up_traj = point2traj ([pos, [pos[0], pos[1]+(random.random()-0.5)*0.2+0.2, pos[2]]])
             start_id = self.move (up_traj, orn_traj, start_id)
 
+            # move in x-axis direction
+            pos = p.getLinkState (self.robotId, 7)[0]
+            up_traj = point2traj ([pos, [pos[0]+(random.random()-0.5)*0.2, pos[1], pos[2]]])
+            start_id = self.move (up_traj, orn_traj, start_id)
+
+        elif self.opt.rand_start == 'two':
+            prob = random.random()
+            if prob<0.5:
+                pos = p.getLinkState (self.robotId, 7)[0]
+                up_traj = point2traj ([pos, [pos[0], pos[1] + 0.2, pos[2]]])
+                start_id = self.move (up_traj, orn_traj, start_id)
+
         self.start_pos = p.getLinkState (self.robotId, 7)[0]
+
+        # grasp_stage_num = 100
+        # for grasp_t in range (grasp_stage_num):
+        #     gripperPos = (grasp_stage_num-grasp_t) / float (grasp_stage_num) * 180.0
+        #     self.robot.gripperControl (gripperPos)
+        #     start_id += 1
 
     def get_handcraft_reward (self):
         distance = sum ([(x - y) ** 2 for x, y in zip (self.start_pos, self.target_pos)]) ** 0.5
@@ -129,4 +169,3 @@ class Engine44(Engine):
         self.log_info.write (self.info)
         print (self.info)
         return self.observation, reward, done, self.info
-
