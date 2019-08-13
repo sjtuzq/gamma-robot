@@ -17,6 +17,7 @@ from Eval.gamma_pred import Frame_eval
 from Cycle.gamma_transfer import Frame_transfer
 from Solver.TD3 import TD3
 from Solver.TD3_embedding import TD3_embedding
+from Solver.TD3_embedding_nlp import TD3_embedding_nlp
 import Envs.bullet_client as bc
 
 
@@ -58,7 +59,10 @@ def main ():
     min_Val = torch.tensor (1e-7).float ().to (device)  # min value
 
     if opt.use_embedding:
-        agent = TD3_embedding (state_dim, action_dim, max_action, env.log_root, opt)
+        if opt.nlp_embedding:
+            agent = TD3_embedding_nlp(state_dim, action_dim, max_action, env.log_root, opt)
+        else:
+            agent = TD3_embedding (state_dim, action_dim, max_action, env.log_root, opt)
     else:
         agent = TD3 (state_dim, action_dim, max_action, env.log_root, opt)
     ep_r = 0

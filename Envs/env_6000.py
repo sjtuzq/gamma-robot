@@ -188,36 +188,7 @@ class Engine6000(Engine):
 
 
     def get_handcraft_reward (self):
-        distance = sum ([(x - y) ** 2 for x, y in zip (self.start_pos, self.target_pos)]) ** 0.5
-        box = p.getAABB (self.box_id, -1)
-        box_center = [(x + y) * 0.5 for x, y in zip (box[0], box[1])]
-        obj = p.getAABB (self.obj_id, -1)
-        obj_center = [(x + y) * 0.5 for x, y in zip (obj[0], obj[1])]
-        aabb_dist = sum ([(x - y) ** 2 for x, y in zip (box_center, obj_center)]) ** 0.5
-
-        if self.opt.video_reward:
-            if ((self.seq_num-1)%self.opt.give_reward_num==self.opt.give_reward_num-1) \
-                    and self.seq_num>=self.opt.cut_frame_num:
-                self.eval.get_caption()
-                rank,probability = self.eval.eval()
-                reward = probability
-                self.info += 'rank: {}\n'.format(rank)
-                self.eval.update(img_path=self.log_path,start_id=self.seq_num-1-self.opt.cut_frame_num)
-            else:
-                reward = 0
-        else:
-            if self.opt.reward_diff:
-                reward = (self.last_aabb_dist - aabb_dist) * 100
-            else:
-                reward = (0.5-aabb_dist)*100
-
-        # reward = (self.last_aabb_dist-aabb_dist)*100
-        self.last_aabb_dist = aabb_dist
-
-        # calculate whether it is done
-        self.info += 'now distance:{}\n'.format (distance)
-        self.info += 'AABB distance:{}\n'.format (aabb_dist)
-
+        reward = 0
         # check whether the seqence number is out of limit
         if self.seq_num >= self.max_seq_num:
             done = True

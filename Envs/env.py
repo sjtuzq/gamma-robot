@@ -485,8 +485,21 @@ class Engine:
         else:
             self.observation = dmp_observations[0][0]
 
+        end_pos = p.getLinkState(self.robotId,7)[0]
+        left_reward = end_pos[1]-init_pos[1]
+        right_reward = init_pos[1]-end_pos[1]
+        up_reward = end_pos[2]-init_pos[2]
+        down_reward = init_pos[2]-end_pos[2]
 
         reward = dmp_observations[-1][1]
+
+        if not self.opt.video_reward and self.opt.embedding_list==[86,87,93,94]:
+            reward = [right_reward,left_reward,right_reward,left_reward]
+        if not self.opt.video_reward and self.opt.embedding_list==[86,94,43,45]:
+            reward = [right_reward,left_reward,down_reward,up_reward]
+        if not self.opt.video_reward and self.opt.embedding_list==[43,45]:
+            reward = [down_reward,up_reward]
+
         self.info += 'total reward: {}\n\n'.format (reward)
 
         done = True
