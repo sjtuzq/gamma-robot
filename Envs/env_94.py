@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-    action101: put sth with sth
+    action94
 """
 import pybullet as p
 import time
@@ -27,8 +27,10 @@ egl = pkgutil.get_loader ('eglRenderer')
 from .env import Engine
 
 class Engine94(Engine):
-    def __init__(self,opt):
-        super(Engine94,self).__init__(opt)
+    def __init__(self, opt, worker_id=None,p_id=None):
+        super(Engine94,self).__init__(opt=opt,p_id=p_id)
+        self.opt = opt
+        self._wid = worker_id
 
     def init_grasp(self):
         pos_traj = np.load (os.path.join (self.env_root, 'init', 'pos.npy'))

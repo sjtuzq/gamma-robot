@@ -18,7 +18,7 @@ parser.add_argument('--learning_rate', default=0.00001, type=float)
 parser.add_argument('--noise_level', default=0.5, type=float)
 parser.add_argument('--noise_training_level', default=0.05, type=float)
 parser.add_argument('--batch_size', default=16, type=int) # mini batch size
-parser.add_argument('--test_id',  default=3003, type=int) #  1000+ means debug
+parser.add_argument('--test_id',  default=1, type=int) #  1000+ means debug
 parser.add_argument('--project_root',  default='/scr1/system/gamma-robot/', type=str) # project root path
 # parser.add_argument('--project_root',  default='/juno/u/qiangzhang/system/gamma-robot/', type=str) # project root path
 
@@ -60,7 +60,7 @@ parser.add_argument('--more_embedding', default=True, type=int)
 
 
 # environment part hyper parameters
-parser.add_argument('--gui',  default=False, type=int) #
+parser.add_argument('--gui',  default=True, type=int) #
 parser.add_argument('--video_id',  default=6, type=int) #
 
 parser.add_argument('--object_id',  default='nut', type=str) #
@@ -87,7 +87,7 @@ parser.add_argument('--add_motion',  default=True, type=int) #
 
 
 # video prediction part hyper parameters
-parser.add_argument('--action_id',  default=3000, type=int) #
+parser.add_argument('--action_id',  default=86, type=int) #
 parser.add_argument('--cut_frame_num',  default=20, type=int) #
 parser.add_argument('--give_reward_num',  default=1, type=int) #
 parser.add_argument('--video_reward',  default=True, type=int) #
@@ -110,7 +110,7 @@ parser.add_argument('--actions_root', default='/scr1/system/beta-robot/dataset/a
 
 
 # environment action using embedding module hyperparameters
-parser.add_argument('--use_embedding',  default=True, type=int) #
+parser.add_argument('--use_embedding',  default=False, type=int) #
 parser.add_argument('--nlp_embedding',  default=True, type=int) #
 parser.add_argument('--embedding_list',  default=[86,94,43,45], type=int) #
 parser.add_argument('--load_embedding', default=None, type=object) #
@@ -125,7 +125,7 @@ parser.add_argument('--load_cycle', default=None, type=object) #
 
 
 # environment action using A3C hyperparameters
-parser.add_argument('--use_a3c',  default=False, type=int) #
+parser.add_argument('--use_a3c',  default=True, type=int) #
 parser.add_argument('--process_N',  default=12, type=int) #
 parser.add_argument('--cuda_id',  default=0, type=int) #
 

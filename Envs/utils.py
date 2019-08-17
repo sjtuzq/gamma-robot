@@ -214,24 +214,27 @@ class Visual:
         plt.cla()
 
 def backup_code(script_path,log_path):
-    log_path = os.path.join(log_path,'script_backup')
-    if os.path.exists(log_path):
-        shutil.rmtree(log_path)
-    shutil.copytree(script_path,log_path)
-    delete_cmd = 'rm -rf {}'.format(os.path.join(log_path,'Eval','base_eval'))
-    os.system(delete_cmd)
-    delete_cmd = 'rm -rf {}'.format (os.path.join (log_path, 'Eval', 'captions'))
-    os.system (delete_cmd)
-    delete_cmd = 'rm -rf {}'.format (os.path.join (log_path, 'Eval', 'pretrain'))
-    os.system (delete_cmd)
-    delete_cmd = 'rm -rf {}'.format (os.path.join (log_path, 'Eval', 'model'))
-    os.system (delete_cmd)
-    delete_cmd = 'rm -rf {}'.format (os.path.join (log_path, 'Eval', 'model_zoo'))
-    os.system (delete_cmd)
-    delete_cmd = 'rm -rf {}'.format (os.path.join (log_path, 'Envs', 'urdf'))
-    os.system (delete_cmd)
-    delete_cmd = 'rm -rf {}'.format (os.path.join (log_path, 'Envs', 'texture'))
-    os.system (delete_cmd)
+    try:
+        log_path = os.path.join(log_path,'script_backup')
+        if os.path.exists(log_path):
+            shutil.rmtree(log_path)
+        shutil.copytree(script_path,log_path)
+        delete_cmd = 'rm -rf {}'.format(os.path.join(log_path,'Eval','base_eval'))
+        os.system(delete_cmd)
+        delete_cmd = 'rm -rf {}'.format (os.path.join (log_path, 'Eval', 'captions'))
+        os.system (delete_cmd)
+        delete_cmd = 'rm -rf {}'.format (os.path.join (log_path, 'Eval', 'pretrain'))
+        os.system (delete_cmd)
+        delete_cmd = 'rm -rf {}'.format (os.path.join (log_path, 'Eval', 'model'))
+        os.system (delete_cmd)
+        delete_cmd = 'rm -rf {}'.format (os.path.join (log_path, 'Eval', 'model_zoo'))
+        os.system (delete_cmd)
+        delete_cmd = 'rm -rf {}'.format (os.path.join (log_path, 'Envs', 'urdf'))
+        os.system (delete_cmd)
+        delete_cmd = 'rm -rf {}'.format (os.path.join (log_path, 'Envs', 'texture'))
+        os.system (delete_cmd)
+    except:
+        print("backup error")
 
 def get_next_test_id():
     num = 0

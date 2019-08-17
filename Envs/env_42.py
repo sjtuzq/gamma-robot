@@ -27,8 +27,10 @@ egl = pkgutil.get_loader ('eglRenderer')
 from .env import Engine
 
 class Engine42(Engine):
-    def __init__(self,opt):
-        super(Engine42,self).__init__(opt)
+    def __init__(self, opt, worker_id=None,p_id=None):
+        super(Engine42,self).__init__(opt=opt,p_id=p_id)
+        self.opt = opt
+        self._wid = worker_id
 
     def init_grasp(self):
         try:

@@ -66,17 +66,20 @@ class Frame_eval:
             output, output_index = self.base_eval.get_baseline_reward(self.img_path)
             rank = np.argwhere (output_index == self.class_label).squeeze () + 1
             reward = output[self.class_label] * 173
-            reward = F.sigmoid(torch.tensor(reward).float())- F.sigmoid(torch.tensor(1).float())
 
-            # the following function does not work
-            # reward = output[self.class_label] * 173 - 1
-            # reward = F.sigmoid (torch.tensor (reward).float ()) - 0.5
+            if self.opt.use_a3c:
+                reward = reward / 10.
+            else:
+                reward = F.sigmoid(torch.tensor(reward).float())- F.sigmoid(torch.tensor(1).float())
 
             if self.opt.use_embedding:
                 reward = []
                 for i in range(len(self.opt.embedding_list)):
-                    action_reward = F.sigmoid (torch.tensor (output[self.opt.embedding_list[i]] * 173).float ()) \
-                                    - F.sigmoid (torch.tensor (1).float ())
+                    if self.opt.use_a3c:
+                        action_reward = torch.tensor (output[self.opt.embedding_list[i]] * 173/10).float ()
+                    else:
+                        action_reward = F.sigmoid (torch.tensor (output[self.opt.embedding_list[i]] * 173).float ()) \
+                                        - F.sigmoid (torch.tensor (1).float ())
                     reward.append(action_reward)
 
                 reward_mean = float(sum(reward))/self.opt.embedding_dim

@@ -12,6 +12,7 @@ import cv2
 import os
 import argparse
 import torch
+from tensorboardX import SummaryWriter
 
 import sys
 sys.path.append('./Eval')
@@ -35,9 +36,16 @@ import pkgutil
 egl = pkgutil.get_loader ('eglRenderer')
 
 class Engine:
-    def __init__(self,opt):
+    def __init__(self,opt,p_id=None,w_id=None):
         self.opt = opt
-        self.p = opt.p
+        if p_id is None:
+            self.p = opt.p
+        else:
+            self.p = p_id
+        if w_id is not None:
+            self.w_id = w_id
+        else:
+            self.w_id = 0
         self.class_id = opt.action_id
         self.video_id = opt.video_id
         self.test_id = opt.test_id
@@ -57,13 +65,38 @@ class Engine:
 
         self.dataset_root = os.path.join(opt.project_root,'dataset')
         self.log_root = os.path.join(opt.project_root,'logs')
-        self.log_root = safe_path(self.log_root+'/td3_log/test{}'.format(self.test_id))
+        if self.opt.use_a3c:
+            self.log_root = safe_path(self.log_root+'/a3c_log/test{}'.format(self.test_id))
+        else:
+            self.log_root = safe_path (self.log_root + '/td3_log/test{}'.format (self.test_id))
+
+        self.writer = SummaryWriter(self.log_root)
 
         self.env_root = os.path.join(opt.project_root,'scripts','Envs')
         self.script_root = os.path.join(opt.project_root,'scripts')
         self.embedding_data = np.load(os.path.join(self.script_root,'utils','labels','label_embedding_uncased.npy'))
+
+        if self.opt.test_id==3000:
+            adjust_list = [86,94,43,45]
+            adjust_center = np.zeros_like(self.embedding_data[0])
+            for adjust_id in adjust_list:
+                adjust_center += self.embedding_data[adjust_id]
+            adjust_center /= 4
+            for adjust_id in adjust_list:
+                self.embedding_data[adjust_id] = (self.embedding_data[adjust_id]-adjust_center)*3+adjust_center
+            np.save(os.path.join (self.script_root, 'utils', 'labels', 'label_embedding_uncased_adjusted.npy'),self.embedding_data)
+
+        if self.opt.test_id==121:
+            adjust_list = [86,94,43,45]
+            self.embedding_data[86] = np.array([1,0,0,0]*int(self.opt.embedding_dim/4))
+            self.embedding_data[94] = np.array([0,1,0,0]*int(self.opt.embedding_dim/4))
+            self.embedding_data[43] = np.array([0,0,1,0]*int(self.opt.embedding_dim/4))
+            self.embedding_data[45] = np.array([0,0,0,1]*int(self.opt.embedding_dim/4))
+            np.save(os.path.join (self.script_root, 'utils', 'labels', 'label_embedding_uncased_adjusted.npy'),self.embedding_data)
+
         self.memory_path = safe_path(os.path.join(self.log_root,'memory'))
         backup_code (self.script_root, self.log_root)
+        print('code has been saved!')
 
         self.init_plane ()
         self.init_table ()
@@ -352,13 +385,23 @@ class Engine:
         self.p.setAdditionalSearchPath(pybullet_data.getDataPath())
         self.p.setGravity(0, 0, -9.8)
         self.p.setTimeStep (1/250.)
-        try:
-            self.epoch_num += 1
-        except:
-            self.epoch_num = 0
 
-        self.log_path = safe_path(os.path.join(self.log_root,'epoch-{}'.format(self.epoch_num)))
-        self.log_info = open(os.path.join(self.log_root,'epoch-{}.txt'.format(self.epoch_num)),'w')
+        epoch_max = -1
+        for file in os.listdir (self.log_root):
+            if ('epoch' in file) and ('txt' not in file):
+                epoch_max = max (epoch_max, int (file.split ('-')[1]))
+        self.epoch_num = epoch_max + 1
+        print ('epoch_max:{}'.format (epoch_max))
+
+        lock = 1
+        while(lock):
+            try:
+                self.log_path = safe_path(os.path.join(self.log_root,'epoch-{}'.format(self.epoch_num)))
+                self.log_info = open(os.path.join(self.log_root,'epoch-{}.txt'.format(self.epoch_num)),'w')
+                lock = 0
+            except:
+                self.epoch_num += 1
+
         # self.evaluator.update (img_path=self.log_path, start_id=0)
         self.seq_num = 0
         self.init_dmp()
@@ -439,7 +482,8 @@ class Engine:
         init_pos = self.start_pos
 
         if self.opt.use_embedding:
-            self.info += 'target:{}\n'.format(str(self.action_embedding))
+            self.info += 'target:{}\n'.format(str(self.opt.load_embedding))
+            self.info += 'target_embedding:{}\n'.format(str(self.action_embedding))
 
         # p.changeVisualShape (self.obj_id, -1, rgbaColor=[0, 0, 1, 1])
         # action[-1] = -0.1
@@ -493,14 +537,13 @@ class Engine:
 
         reward = dmp_observations[-1][1]
 
-        if not self.opt.video_reward and self.opt.embedding_list==[86,87,93,94]:
-            reward = [right_reward,left_reward,right_reward,left_reward]
-        if not self.opt.video_reward and self.opt.embedding_list==[86,94,43,45]:
-            reward = [right_reward,left_reward,down_reward,up_reward]
-        if not self.opt.video_reward and self.opt.embedding_list==[43,45]:
-            reward = [down_reward,up_reward]
-
-        self.info += 'total reward: {}\n\n'.format (reward)
+        if self.opt.use_embedding:
+            reward_id = np.where (np.array (self.opt.embedding_list) == self.opt.load_embedding)[0][0]
+            self.writer.add_scalar ('reward_{}'.format(self.w_id), reward[reward_id], global_step=self.epoch_num)
+            self.info += 'single reward: {}\n'.format (reward[reward_id])
+            self.info += 'target action: {}\n\n'.format (self.opt.load_embedding)
+        else:
+            self.writer.add_scalar ('reward_{}'.format (self.w_id), reward, global_step=self.epoch_num)
 
         done = True
         print(self.info)
@@ -578,7 +621,7 @@ class Engine:
             if self.opt.use_cycle:
                 self.cycle.image_transfer(self.epoch_num)
             self.eval.update(img_path=self.log_path,start_id=self.seq_num-1-self.opt.cut_frame_num)
-            self.eval.get_caption()
+            # self.eval.get_caption()
             rank,probability = self.eval.eval()
             reward = probability
             self.info += 'rank: {}\n'.format(rank)

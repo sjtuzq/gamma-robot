@@ -38,6 +38,14 @@ class Replay_buffer ():
         self.embedding_data = np.load (
             os.path.join (self.opt.project_root,'scripts', 'utils',
                           'labels', 'label_embedding_uncased.npy'))
+        if self.opt.test_id==3000:
+            self.embedding_data = np.load (
+                os.path.join (self.opt.project_root, 'scripts', 'utils',
+                              'labels', 'label_embedding_uncased_adjusted.npy'))
+        if self.opt.test_id==121:
+            self.embedding_data = np.load (
+                os.path.join (self.opt.project_root, 'scripts', 'utils',
+                              'labels', 'label_embedding_uncased_adjusted.npy'))
 
     def push (self, data):
         if len (self.storage) == self.max_size:
@@ -139,23 +147,49 @@ class Actor (nn.Module):
         self.opt = opt
 
         self.embedding_dim = self.opt.rl_embedding_dim
+        self.feature_fc = nn.Sequential(
+            nn.Linear (self.opt.embedding_dim, 512),
+            nn.ReLU (),
+            nn.Linear (512, 256),
+            nn.ReLU (),
+            nn.Linear (256, 256),
+            nn.ReLU (),
+            nn.Linear (256, 256),
+        )
         self.nlp_fc =  nn.Sequential(
-            nn.Linear(self.opt.embedding_dim,256),
-            nn.ReLU(),
             nn.Linear(256,128),
             nn.ReLU(),
             nn.Linear(128,64),
             nn.ReLU(),
             nn.Linear(64,self.embedding_dim),
-            nn.ReLU()
+        )
+        self.stn = nn.Sequential(
+            nn.Linear(256,256),
+            nn.ReLU(),
+            nn.Linear (256, 256),
+            nn.ReLU (),
+            nn.Linear(256,self.embedding_dim*self.embedding_dim),
         )
         self.fc1 = nn.Linear (state_dim + self.embedding_dim, 400)
 
         if not self.opt.more_embedding:
             self.embedding_dim = 0
 
-        self.fc2 = nn.Linear (400 + self.embedding_dim, 300)
-        self.fc3 = nn.Linear (300 + self.embedding_dim, action_dim)
+        self.fc2 = nn.Sequential(
+            nn.Linear (400 + self.embedding_dim, 300),
+            nn.ReLU(),
+            nn.Linear(300,200)
+        )
+        # self.fc3 = nn.Linear (300 + self.embedding_dim, 1)
+        self.fc3 = nn.Sequential(
+            nn.Linear (200 + self.embedding_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128,64),
+            nn.ReLU(),
+            nn.Linear(64,32),
+            nn.ReLU(),
+            nn.Linear(32,action_dim)
+        )
 
         self.max_action = max_action
 
@@ -171,13 +205,20 @@ class Actor (nn.Module):
         if self.opt.observation == 'before_cnn':
             state = self.cnn (state.transpose (1, 3))
 
-        action_embedding = self.nlp_fc(action_embedding)
+        action_embedding_feature = self.feature_fc(action_embedding)
+
+        action_embedding = self.nlp_fc(action_embedding_feature)
+        action_stn = self.stn(action_embedding_feature).view(-1,self.embedding_dim,self.embedding_dim)
+
+        action_embedding = torch.bmm(action_embedding.unsqueeze(1),action_stn).squeeze(1)
+
         state = torch.cat ([action_embedding, state], 1)
         a = F.relu (self.fc1 (state))
 
         if self.opt.more_embedding:
             a = torch.cat([action_embedding,a],1)
         a = F.relu (self.fc2 (a))
+
         if self.opt.more_embedding:
             a = torch.cat([action_embedding,a],1)
 
@@ -193,23 +234,49 @@ class Critic (nn.Module):
         self.opt = opt
 
         self.embedding_dim = self.opt.rl_embedding_dim
-        self.nlp_fc = nn.Sequential (
-            nn.Linear (self.opt.embedding_dim, 256),
+        self.feature_fc = nn.Sequential(
+            nn.Linear (self.opt.embedding_dim, 512),
             nn.ReLU (),
-            nn.Linear (256, 128),
+            nn.Linear (512, 256),
             nn.ReLU (),
-            nn.Linear (128, 64),
+            nn.Linear (256, 256),
             nn.ReLU (),
-            nn.Linear (64, self.embedding_dim),
-            nn.ReLU ()
+            nn.Linear (256, 256),
+        )
+        self.nlp_fc =  nn.Sequential(
+            nn.Linear(256,128),
+            nn.ReLU(),
+            nn.Linear(128,64),
+            nn.ReLU(),
+            nn.Linear(64,self.embedding_dim),
+        )
+        self.stn = nn.Sequential(
+            nn.Linear(256,256),
+            nn.ReLU(),
+            nn.Linear (256, 256),
+            nn.ReLU (),
+            nn.Linear(256,self.embedding_dim*self.embedding_dim),
         )
         self.fc1 = nn.Linear (state_dim + action_dim + self.embedding_dim, 400)
 
         if not self.opt.more_embedding:
             self.embedding_dim = 0
 
-        self.fc2 = nn.Linear (400 + self.embedding_dim, 300)
-        self.fc3 = nn.Linear (300 + self.embedding_dim, 1)
+        self.fc2 = nn.Sequential(
+            nn.Linear (400 + self.embedding_dim, 300),
+            nn.ReLU(),
+            nn.Linear(300,200)
+        )
+        # self.fc3 = nn.Linear (300 + self.embedding_dim, 1)
+        self.fc3 = nn.Sequential(
+            nn.Linear (200 + self.embedding_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128,64),
+            nn.ReLU(),
+            nn.Linear(64,32),
+            nn.ReLU(),
+            nn.Linear(32,1)
+        )
 
         self.cnn = nn.Sequential (
             models.resnet18 (pretrained=True).to (device),
@@ -223,13 +290,20 @@ class Critic (nn.Module):
         if self.opt.observation == 'before_cnn':
             state = self.cnn (state.transpose (1, 3))
 
-        action_embedding = self.nlp_fc(action_embedding)
+        # action_embedding = self.nlp_fc(action_embedding)
+
+        action_embedding_feature = self.feature_fc(action_embedding)
+        action_embedding = self.nlp_fc(action_embedding_feature)
+        action_stn = self.stn(action_embedding_feature).view(-1,self.embedding_dim,self.embedding_dim)
+        action_embedding = torch.bmm(action_embedding.unsqueeze(1),action_stn).squeeze(1)
+
         # state_action = torch.cat([state, action], 1)
         state_action = torch.cat ([action_embedding, state, action], 1)
         q = F.relu (self.fc1 (state_action))
 
         if self.opt.more_embedding:
             q = torch.cat([action_embedding,q],1)
+
         q = F.relu (self.fc2 (q))
         if self.opt.more_embedding:
             q = torch.cat([action_embedding,q],1)
@@ -327,6 +401,7 @@ class TD3_embedding_nlp ():
             loss_Q2.backward ()
             self.critic_2_optimizer.step ()
             self.writer.add_scalar ('Loss/Q2_loss', loss_Q2, global_step=self.num_critic_update_iteration)
+
             # Delayed policy updates:
             if i % self.args.policy_delay == 0:
                 # Compute actor loss:
@@ -336,6 +411,7 @@ class TD3_embedding_nlp ():
                 self.actor_optimizer.zero_grad ()
                 actor_loss.backward ()
                 self.actor_optimizer.step ()
+
                 self.writer.add_scalar ('Loss/actor_loss', actor_loss, global_step=self.num_actor_update_iteration)
                 for param, target_param in zip (self.actor.parameters (), self.actor_target.parameters ()):
                     target_param.data.copy_ (((1 - self.args.tau) * target_param.data) + self.args.tau * param.data)
@@ -347,6 +423,7 @@ class TD3_embedding_nlp ():
                     target_param.data.copy_ (((1 - self.args.tau) * target_param.data) + self.args.tau * param.data)
 
                 self.num_actor_update_iteration += 1
+
         self.num_critic_update_iteration += 1
         self.num_training += 1
 

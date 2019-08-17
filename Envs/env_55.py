@@ -28,16 +28,16 @@ except Exception:
     from utils import get_view,safe_path,cut_frame,point2traj,get_gripper_pos,backup_code
 
 class Engine55(Engine):
-    def __init__(self, opt, worker_id=None):
-        super(Engine55,self).__init__(opt)
+    def __init__(self, opt, worker_id=None,p_id=None):
+        super(Engine55,self).__init__(opt=opt,p_id=p_id)
         self.opt = opt 
         self._wid = worker_id
-        self.physical_id = opt.p
+        # self.physical_id = opt.p
         self.robot.gripperMaxForce = 200.0
         self.robot.armMaxForce = 200.0
         self.robot.jd = [0.01] * 14
 
-        self.opt.p.setPhysicsEngineParameter (constraintSolverType=self.opt.p.CONSTRAINT_SOLVER_LCP_DANTZIG,
+        self.p.setPhysicsEngineParameter (constraintSolverType=self.p.CONSTRAINT_SOLVER_LCP_DANTZIG,
                                              globalCFM=0.000001)
 
 
