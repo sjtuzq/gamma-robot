@@ -28,8 +28,10 @@ egl = pkgutil.get_loader ('eglRenderer')
 from .env import Engine
 
 class Engine2000(Engine):
-    def __init__(self,opt):
-        super(Engine2000,self).__init__(opt)
+    def __init__(self, opt, worker_id=None,p_id=None):
+        super(Engine2000,self).__init__(opt=opt,p_id=p_id,w_id=worker_id)
+        self.opt = opt
+        self._wid = worker_id
 
     def init_grasp(self):
         p.resetBasePositionAndOrientation (self.table_id, [0.42, 0, 0], [0, 0, math.pi * 0.32, 1])

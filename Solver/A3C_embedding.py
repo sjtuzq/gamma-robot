@@ -20,7 +20,7 @@ from tensorboardX import SummaryWriter
 device = 'cuda' if torch.cuda.is_available () else 'cpu'
 
 MAX_EP = 1000 * 1000
-UPDATE_GLOBAL_ITER = 10
+UPDATE_GLOBAL_ITER = 5
 GAMMA = 0.9
 ENTROPY_BETA = 0.005
 
@@ -39,7 +39,7 @@ def push_and_pull (optim, lnet, gnet, done, s_, bs, ba, br, be, gamma):
 
     buffer_v_target = []
     for r in br[::-1]:
-        v_s_ = r + gamma * v_s_
+        v_s_ = r
         buffer_v_target.append (v_s_)
     buffer_v_target.reverse ()
 
@@ -90,38 +90,53 @@ class ACNet (nn.Module):
         super (ACNet, self).__init__ ()
         self.opt = opt
         self.distribution = torch.distributions.Normal
-        self.state_dim = 24
+        self.state_dim = 2
         self.cnn = nn.Sequential (
             models.resnet18 (pretrained=True).to (device),
             nn.Linear (in_features=1000, out_features=512),
             nn.ReLU (),
             nn.Linear (in_features=512, out_features=256),
             nn.ReLU (),
+            nn.Linear (in_features=256, out_features=64),
+            nn.ReLU (),
+            nn.Linear (in_features=64, out_features=self.state_dim),
+            nn.ReLU (),
         )
 
         self.embedding_dim = self.opt.embedding_dim
+        self.repeat_n = 4
+        self.extract_dim = 4
         # 2, 3
         self.fc_a = nn.Sequential (
-            nn.Linear (256, 128),
+            nn.Linear (self.state_dim+self.embedding_dim*self.repeat_n, 128),
             nn.ReLU (),
             nn.Linear (128, 64),
             nn.ReLU (),
-            nn.Linear (64, 24),
+            nn.Linear (64, self.extract_dim),
+            nn.ReLU ()
+        )
+
+        self.fc_s = nn.Sequential (
+            nn.Linear (self.state_dim+self.embedding_dim*self.repeat_n, 128),
+            nn.ReLU (),
+            nn.Linear (128, 64),
+            nn.ReLU (),
+            nn.Linear (64, self.extract_dim),
             nn.ReLU ()
         )
 
         self.fc_v = nn.Sequential (
-            nn.Linear (256, 128),
+            nn.Linear (self.state_dim+self.embedding_dim*self.repeat_n, 128),
             nn.ReLU (),
             nn.Linear (128, 64),
             nn.ReLU (),
-            nn.Linear (64, 24),
+            nn.Linear (64, self.extract_dim),
             nn.ReLU ()
         )
 
-        self.mu_layer = nn.Linear (24+ self.embedding_dim, 3)
-        self.sigma_layer = nn.Linear (24+ self.embedding_dim, 3)
-        self.v_layer = nn.Linear (24+ self.embedding_dim, 1)
+        self.mu_layer = nn.Linear (self.extract_dim+ self.embedding_dim*self.repeat_n, 3)
+        self.sigma_layer = nn.Linear (self.extract_dim+ self.embedding_dim*self.repeat_n, 3)
+        self.v_layer = nn.Linear (self.extract_dim+ self.embedding_dim*self.repeat_n, 1)
 
         set_init ([self.mu_layer, self.sigma_layer, self.v_layer])
 
@@ -133,17 +148,28 @@ class ACNet (nn.Module):
 
         im = self.cnn (im.transpose (1, 3))
 
-        # im = torch.cat ([im, e], 1)
+        for i in range(self.repeat_n):
+            im = torch.cat ([im, e], 1)
 
         x_a = self.fc_a (im)
-        x_a = torch.cat([x_a,e],1)
+
+        for i in range(self.repeat_n):
+            x_a = torch.cat ([x_a, e], 1)
 
         mu = self.mu_layer (x_a)
-        sigma = self.sigma_layer (x_a)
-        sigma = F.sigmoid (sigma) + 0.01
+        mu = F.tanh (mu)
+        x_s = self.fc_s (im)
 
+        for i in range(self.repeat_n):
+            x_s = torch.cat ([x_s, e], 1)
+
+        sigma = self.sigma_layer (x_s)
+        sigma = F.sigmoid (sigma) + 0.005
         x_v = self.fc_v (im)
-        x_v = torch.cat ([x_v, e], 1)
+
+        for i in range(self.repeat_n):
+            x_v = torch.cat ([x_v, e], 1)
+
         values = self.v_layer (x_v)
         return mu, sigma, values
 
@@ -160,10 +186,12 @@ class ACNet (nn.Module):
         c_loss = td.pow (2)
 
         m = self.distribution (mu, sigma)
+
         log_prob = m.log_prob (a)
         entropy = 0.5 + 0.5 * math.log (2 * math.pi) + torch.log (m.scale)
         exp_v = log_prob * td.detach () + ENTROPY_BETA * entropy
         a_loss = -exp_v
+
         total_loss = (a_loss + c_loss).mean ()
         return total_loss
 
@@ -184,10 +212,6 @@ class Worker (mp.Process):
 
         self.lnet = ACNet (opt).to (device)
         self.init_step = 0
-        # log_path = os.path.join (opt.project_root, 'logs/td3_log/test{}/thread{}'.format (opt.test_id,self.wid))
-        # if not os.path.exists(log_path):
-        #     os.mkdir(log_path)
-        # self.writer = SummaryWriter(log_path)
         self.RobotEnv = RobotEnv
         self.opt = opt
 
@@ -215,86 +239,71 @@ class Worker (mp.Process):
         sigma_check2 = 0
         total_episode = 0
 
-        buffer_s, buffer_a, buffer_r, buffer_e = [], [], [], []
+        buffer_s, buffer_a, buffer_r, buffer_e = [], [], [],[]
+        buffer_mem_s, buffer_mem_a, buffer_mem_r, buffer_mem_e = [], [], [], []
+
         while self.g_ep.value < MAX_EP:
             observation = self.env.reset ()
             observation[1] = observation[1] / 255.0
             observation[1] = (observation[1] - mean) / std
 
-            # if self.wid == 0:
-            #     print ("inital", np.sum (np.isnan (observation)), np.max (np.abs (observation)))
-
             while True:
                 action, mu_r, sigma_r = self.lnet.choose_action (v_wrap (observation[1][None, :]),
                                                                  v_wrap (observation[0][None, :]))
                 print ("action", action, "mu_r", mu_r, "sigma_r", sigma_r)
+                self.env.info += 'action:{}\n'.format (str (action))
+                self.env.info += 'mu:{}\n'.format (str (mu_r))
+                self.env.info += 'sigma:{}\n'.format (str (sigma_r))
 
                 action = action.clip (-0.2, 0.2)
                 observation_next, reward, done, suc = self.env.step (action)
                 observation_next[1] = observation_next[1] / 255.0
                 observation_next[1] = (observation_next[1] - mean) / std
 
-                # reward_id = np.where (np.array (self.env.opt.embedding_list) == self.env.opt.load_embedding)[0][0]
-                # reward = reward[reward_id]
-
-                # self.writer.add_scalar ('reward', reward, global_step=self.env.epoch_num)
-
-                # buffer_s.append (observation[1])
-                # buffer_r.append (reward)
-                # buffer_a.append (action)
-                # buffer_e.append (observation[0])
-
                 reward_id = np.where (np.array (self.env.opt.embedding_list) == self.env.opt.load_embedding)[0][0]
-
 
                 buffer_s.append (observation[1])
                 buffer_r.append (reward[reward_id])
                 buffer_a.append (action)
                 buffer_e.append (observation[0])
 
-                if reward[reward_id]>0:
-                    for replay_id in range(5):
+                # if reward[reward_id] > 0.05:
+                #     buffer_mem_s.append (observation[1])
+                #     buffer_mem_r.append (reward[reward_id])
+                #     buffer_mem_a.append (action)
+                #     buffer_mem_e.append (observation[0])
+
+                if self.opt.align_sample:
+                    for conj_id in np.where (observation[0] == 0)[0]:
+                        conj_X = np.zeros_like (observation[0])
+                        conj_X[conj_id] = 1
                         buffer_s.append (observation[1])
-                        buffer_r.append (reward[reward_id])
+                        buffer_r.append (reward[conj_id])
                         buffer_a.append (action)
-                        buffer_e.append (observation[0])
+                        buffer_e.append (conj_X)
 
 
-                if total_step % UPDATE_GLOBAL_ITER == 0 or done:  # or self.g_ep.value % (10 * UPDATE_GLOBAL_ITER):
-                    push_and_pull (self.optim, self.lnet, self.gnet, done, observation_next, buffer_s, buffer_a,
-                                   buffer_r, buffer_e, GAMMA)
-                    print ("updateting weights")
+                if total_step % (UPDATE_GLOBAL_ITER) == 0:  # or self.g_ep.value % (10 * UPDATE_GLOBAL_ITER):
+                    # sync
+                    buffer_s = buffer_s + buffer_mem_s
+                    buffer_a = buffer_a + buffer_mem_a
+                    buffer_r = buffer_r + buffer_mem_r
+                    buffer_e = buffer_e + buffer_mem_e
+
+                    push_and_pull (self.optim, self.lnet, self.gnet, done, observation_next,
+                                   buffer_s, buffer_a, buffer_r, buffer_e, GAMMA)
                     buffer_s, buffer_a, buffer_r, buffer_e = [], [], [], []
+                    if len (buffer_mem_s) > 20:
+                        buffer_mem_s, buffer_mem_a, buffer_mem_r, buffer_mem_e = [], [], [], []
 
-                # if done:
-                #   suc_check += suc
-                #   episode_check += 1
-                #   total_episode += 1
 
                 observation = observation_next
                 total_step += 1
                 reward_check += reward[reward_id]
 
                 if self.env.epoch_num % 200 == 0:
-                    save_path = os.path.join(self.env.log_root,str(total_step)+'model.pth.tar')
+                    save_path = os.path.join(self.env.log_root,str(self.env.epoch_num)+'model.pth.tar')
                     torch.save(self.gnet.state_dict(), save_path)
-
-
-                # with self.global_ep.get_lock():
-                #  self.global_ep.value += 1
-
-                # if total_step % 1000 == 0:
-                #   current_performance = float(suc_check)/episode_check
-                #   avg_sigma1 = sigma_check1 / 1000.0
-                #   avg_sigma2 = sigma_check2 / 1000.0
-                #   save_path = os.path.join(self.log_path,str(total_step)+'model.pth.tar')
-                #   if self.wid == 0:
-                #     torch.save(self.gnet.state_dict(), save_path)
-                #   suc_check = 0
-                #   reward_check = 0
-                #   episode_check = 0
-                #   sigma_check1 = 0.0
-                #   sigma_check2 = 0.0
 
                 if done:
                     break
@@ -314,7 +323,7 @@ class A3C_solver_embedding:
         gnet.to (device)
         gnet.share_memory ()
 
-        optim = SharedAdam (gnet.parameters (), lr=0.0001)
+        optim = SharedAdam (gnet.parameters (), lr=self.opt.learning_rate)
         global_ep, global_ep_r, res_queue = mp.Value ('i', 0), mp.Value ('d', 0.), mp.Queue ()
 
         workers = [Worker (gnet, optim, global_ep, global_ep_r, res_queue, i, self.opt, self.RobotEnv) for i in range (self.opt.process_N)]
@@ -351,7 +360,7 @@ if __name__ == "__main__":
     gnet.to (device)
     gnet.share_memory ()
 
-    optim = SharedAdam (gnet.parameters (), lr=0.0002)
+    optim = SharedAdam (gnet.parameters (), lr=0.00002)
     global_ep, global_ep_r, res_queue = mp.Value ('i', 0), mp.Value ('d', 0.), mp.Queue ()
 
     workers = [Worker (gnet, optim, global_ep, global_ep_r, res_queue, i, SAVE_TOP_DIR) for i in range (10)]

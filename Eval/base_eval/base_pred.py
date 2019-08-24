@@ -49,9 +49,12 @@ class Base_eval:
         # multi GPU setting
         self.model = torch.nn.DataParallel (self.model, self.device_ids).to (self.device)
 
-        if self.opt.use_refine_baseline:
-            save_dir = os.path.join (os.path.join (self.root, "trained_models/pretrained/" + "refined"))
-        else:
+        try:
+            if self.opt.use_refine_baseline:
+                save_dir = os.path.join (os.path.join (self.root, "trained_models/pretrained/" + "refined"))
+            else:
+                save_dir = os.path.join (os.path.join (self.root, "trained_models/pretrained/" + self.config['model_name']))
+        except:
             save_dir = os.path.join (os.path.join (self.root, "trained_models/pretrained/" + self.config['model_name']))
         checkpoint_path = os.path.join (save_dir, 'model_best.pth.tar')
 
@@ -98,6 +101,33 @@ class Base_eval:
         data = data.permute (1, 0, 2, 3)
         return data
 
+    def memroy_loader(self,imgs):
+        transform_pre = ComposeMix ([
+            [Scale (int (1.4 * self.config['input_spatial_size'])), "img"],
+            [torchvision.transforms.ToPILImage (), "img"],
+            [torchvision.transforms.CenterCrop (self.config['input_spatial_size']), "img"],
+        ])
+
+        transform_post = ComposeMix ([
+            [torchvision.transforms.ToTensor (), "img"],
+            [torchvision.transforms.Normalize (
+                mean=[0.485, 0.456, 0.406],  # default values for imagenet
+                std=[0.229, 0.224, 0.225]), "img"]
+        ])
+
+        imgs = transform_pre (imgs)
+        imgs = transform_post (imgs)
+
+        # num_frames = len (imgs)
+        # num_frames_necessary = 72
+
+        if len (imgs) < 72:
+            imgs.extend ([imgs[-1]] * (72 - len (imgs)))
+
+        data = torch.stack (imgs)
+        data = data.permute (1, 0, 2, 3)
+        return data
+
 
     def get_baseline_reward (self,filepath):
         with torch.no_grad ():
@@ -111,6 +141,20 @@ class Base_eval:
     
             output_index = np.argsort (output * -1.0)
     
+            return (output, output_index)
+
+    def get_memory_reward(self,img_buffer):
+        with torch.no_grad ():
+            img_buffer = self.memroy_loader(img_buffer)
+            input = img_buffer.float ().unsqueeze (0)
+            input_var = [input.to (self.device)]
+            output = self.model (input_var, False)
+            output = F.softmax (output, 1)
+            output = output.cpu ().detach ().numpy ()
+            output = np.squeeze (output)
+
+            output_index = np.argsort (output * -1.0)
+
             return (output, output_index)
 
 

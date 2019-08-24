@@ -28,6 +28,7 @@ class Frame_eval:
         self.tmp_dir = safe_path(os.path.join(self.video_path,'{}'.format(self.video_id)))
         self.opt = opt
         self.base_eval = Base_eval(self.opt)
+        self.reward_fix = np.load(os.path.join(self.opt.project_root,'scripts','utils','labels','reward_mean_std.npy'))
 
     def update(self,img_path=None,start_id=0):
         if img_path is not None:
@@ -51,7 +52,7 @@ class Frame_eval:
         f.close()
         self.result_file = os.path.join(self.memory_path,'result.txt')
 
-    def eval(self):
+    def eval(self,img_buffer=None):
         if self.opt.use_embedding:
             self.class_label = self.opt.load_embedding
 
@@ -63,7 +64,10 @@ class Frame_eval:
             return trn_rank,trn_reward
 
         else:
-            output, output_index = self.base_eval.get_baseline_reward(self.img_path)
+            if self.opt.write_img:
+                output, output_index = self.base_eval.get_baseline_reward(self.img_path)
+            else:
+                output, output_index = self.base_eval.get_memory_reward (img_buffer)
             rank = np.argwhere (output_index == self.class_label).squeeze () + 1
             reward = output[self.class_label] * 173
 
@@ -76,63 +80,29 @@ class Frame_eval:
                 reward = []
                 for i in range(len(self.opt.embedding_list)):
                     if self.opt.use_a3c:
-                        action_reward = torch.tensor (output[self.opt.embedding_list[i]] * 173/10).float ()
+                        action_reward = torch.tensor (output[self.opt.embedding_list[i]] * 173/10.).float ()
                     else:
                         action_reward = F.sigmoid (torch.tensor (output[self.opt.embedding_list[i]] * 173).float ()) \
                                         - F.sigmoid (torch.tensor (1).float ())
+                    action_reward = F.sigmoid (torch.tensor (output[self.opt.embedding_list[i]] * 173).float ()) \
+                                    - F.sigmoid (torch.tensor (1).float ())
+                    # action_reward = F.sigmoid (torch.tensor (output[self.opt.embedding_list[i]] * 173).float ())
+
+                    # action_reward = F.sigmoid (torch.tensor (output[self.opt.embedding_list[i]] * 174-2).float ())
+
                     reward.append(action_reward)
 
                 reward_mean = float(sum(reward))/self.opt.embedding_dim
                 for i in range (len(self.opt.embedding_list)):
                     reward[i] = reward[i]*abs(reward[i]-reward_mean)*len(self.opt.embedding_list)
+                    # reward[i] = reward[i]*(reward[i]-reward_mean)*len(self.opt.embedding_list)
+
+                    # reward[i] = (reward[i]-self.reward_fix[i][0])/self.reward_fix[i][1]
+
+                # reward[0] += 0.07
+                # reward[1] += 0.1
 
             return rank,reward
-
-    # def eval(self):
-    #     prob,pred = get_pred(self.video_path,self.caption_file,self.opt)
-    #     prob,pred = prob[0],pred[0]
-    #
-    #     output, output_index = self.base_eval.get_baseline_reward(self.img_path)
-    #
-    #     # print(pred,output_index)
-    #
-    #     # using softmax
-    #     if self.opt.prob_softmax:
-    #         prob = torch.softmax(torch.tensor(prob).float(),0).data.numpy()
-    #         prob = (prob - prob.mean())/np.std(prob)
-    #
-    #     # reward 1
-    #     rank = np.argwhere (pred == self.class_label).squeeze () + 1
-    #     reward1 = prob[np.argwhere (pred == self.class_label).squeeze ()]
-    #
-    #     # reward 2
-    #     rank2 = np.argwhere (output_index == self.class_label).squeeze () + 1
-    #     reward2 = output[self.class_label] * 173
-    #
-    #     reward3 = F.sigmoid(torch.tensor(reward2).float())- F.sigmoid(torch.tensor(1).float())
-    #
-    #     # # reward 3
-    #     # reward3 = 173./rank
-    #     #
-    #     # # reward 4
-    #     # reward4 = 173./rank2
-    #
-    #     return rank2,reward3
-
-        # if self.class_label==107 and self.opt.merge_class and self.test_id==101:
-        #     propability = 0
-        #     # action_list = [104,105,106,107,108,109]
-        #     # for action in action_list:
-        #     #     rank_ = np.argwhere (pred == action).squeeze () + 1
-        #     #     probability += prob[rank_ - 1]
-        #
-        #     rank_ = np.argwhere (pred[0] == self.class_label).squeeze () + 1
-        #     probability = 173./prob[rank_ - 1]
-
-        # if self.class_label==86:
-        #     probability = prob[rank - 1] - prob[np.argwhere (pred == 45).squeeze ()]*0.8
-        # if self.class_label==94:
-        #     probability = prob[rank - 1] - prob[np.argwhere (pred == 45).squeeze ()]*0.8
 
 def test_class():
     agent = Frame_eval(img_path='../../../dataset/actions/43-0/simulation_frames',

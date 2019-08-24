@@ -13,7 +13,7 @@ def compose_gif():
 def my_compose(img_path):
     gif_images = []
     img_list = os.listdir(img_path)
-    img_list = sorted(img_list,key=lambda x:int(x.split('.')[0]))[7:]
+    img_list = sorted(img_list,key=lambda x:int(x.split('.')[0]))[:8]
     for file in img_list:
         gif_images.append(imageio.imread(os.path.join(img_path,file)))
     imageio.mimsave(os.path.join(img_path,"test.gif"),gif_images,fps=2)
@@ -65,5 +65,7 @@ if __name__ == '__main__':
     # my_compose('./gif/47/hold1')
     # my_compose('./gif/47/hold2')
 
-    my_compose2('./logs/before')
-    my_compose2('./logs/after')
+    # my_compose2('./logs/before')
+    # my_compose2('./logs/after')
+
+    my_compose('./gif_final/epoch-8')

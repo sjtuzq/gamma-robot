@@ -75,24 +75,26 @@ class Engine:
         self.env_root = os.path.join(opt.project_root,'scripts','Envs')
         self.script_root = os.path.join(opt.project_root,'scripts')
         self.embedding_data = np.load(os.path.join(self.script_root,'utils','labels','label_embedding_uncased.npy'))
+        np.save (os.path.join (self.script_root, 'utils', 'labels', 'label_embedding_uncased_adjusted.npy'),
+                 self.embedding_data)
 
-        if self.opt.test_id==3000:
-            adjust_list = [86,94,43,45]
-            adjust_center = np.zeros_like(self.embedding_data[0])
-            for adjust_id in adjust_list:
-                adjust_center += self.embedding_data[adjust_id]
-            adjust_center /= 4
-            for adjust_id in adjust_list:
-                self.embedding_data[adjust_id] = (self.embedding_data[adjust_id]-adjust_center)*3+adjust_center
-            np.save(os.path.join (self.script_root, 'utils', 'labels', 'label_embedding_uncased_adjusted.npy'),self.embedding_data)
-
-        if self.opt.test_id==121:
-            adjust_list = [86,94,43,45]
-            self.embedding_data[86] = np.array([1,0,0,0]*int(self.opt.embedding_dim/4))
-            self.embedding_data[94] = np.array([0,1,0,0]*int(self.opt.embedding_dim/4))
-            self.embedding_data[43] = np.array([0,0,1,0]*int(self.opt.embedding_dim/4))
-            self.embedding_data[45] = np.array([0,0,0,1]*int(self.opt.embedding_dim/4))
-            np.save(os.path.join (self.script_root, 'utils', 'labels', 'label_embedding_uncased_adjusted.npy'),self.embedding_data)
+        # if self.opt.test_id==132:
+        #     adjust_list = [86,94,43,45]
+        #     adjust_center = np.zeros_like(self.embedding_data[0])
+        #     for adjust_id in adjust_list:
+        #         adjust_center += self.embedding_data[adjust_id]
+        #     adjust_center /= 4
+        #     for adjust_id in adjust_list:
+        #         self.embedding_data[adjust_id] = (self.embedding_data[adjust_id]-adjust_center)*3+adjust_center
+        #     np.save(os.path.join (self.script_root, 'utils', 'labels', 'label_embedding_uncased_adjusted.npy'),self.embedding_data)
+        #
+        # if self.opt.test_id==144:
+        #     adjust_list = [86,94,43,45]
+        #     self.embedding_data[86] = np.array([0.25]*int(self.opt.embedding_dim))
+        #     self.embedding_data[94] = np.array([0.5]*int(self.opt.embedding_dim))
+        #     self.embedding_data[43] = np.array([1.0]*int(self.opt.embedding_dim))
+        #     self.embedding_data[45] = np.array([0.0]*int(self.opt.embedding_dim))
+        #     np.save(os.path.join (self.script_root, 'utils', 'labels', 'label_embedding_uncased_adjusted.npy'),self.embedding_data)
 
         self.memory_path = safe_path(os.path.join(self.log_root,'memory'))
         backup_code (self.script_root, self.log_root)
@@ -109,6 +111,7 @@ class Engine:
         self.q_home = np.array((0., -np.pi/6., 0., -5./6.*np.pi, 0., 2./3.*np.pi, 0.))
         self.w = self.opt.img_w
         self.h = self.opt.img_h
+        self.epoch_num = 0
 
 
     def destroy(self):
@@ -375,7 +378,8 @@ class Engine:
             dmp_imitation_data = np.array (trajectories)
             self.dmp.imitate (dmp_imitation_data)
 
-    def reset(self):
+    def reset(self,target=None):
+        self.img_buffer = []
         try:
             self.destroy()
         except:
@@ -386,12 +390,15 @@ class Engine:
         self.p.setGravity(0, 0, -9.8)
         self.p.setTimeStep (1/250.)
 
-        epoch_max = -1
-        for file in os.listdir (self.log_root):
-            if ('epoch' in file) and ('txt' not in file):
-                epoch_max = max (epoch_max, int (file.split ('-')[1]))
-        self.epoch_num = epoch_max + 1
-        print ('epoch_max:{}'.format (epoch_max))
+        # epoch_max = -1
+        # for file in os.listdir (self.log_root):
+        #     if ('epoch' in file) and ('txt' not in file):
+        #         epoch_max = max (epoch_max, int (file.split ('-')[1]))
+        # self.epoch_num = epoch_max + 1
+        # print ('epoch_max:{}'.format (epoch_max))
+
+        self.epoch_num += 1
+        print('epoch_max:{}'.format(self.epoch_num))
 
         lock = 1
         while(lock):
@@ -417,6 +424,15 @@ class Engine:
             action_p = random.random ()
 
             action_p = int(action_p*len(self.opt.embedding_list))
+
+            if self.opt.fine_tune:
+                fine_tune_list = self.opt.fine_tune_list
+                action_p = random.random ()
+                action_p = int (action_p * len (fine_tune_list))
+                action_p = np.where (np.array (self.opt.embedding_list) == fine_tune_list[action_p])[0][0]
+
+            if target is not None:
+                action_p =  np.where(np.array(self.opt.embedding_list)==target)[0][0]
 
             if self.opt.nlp_embedding:
                 self.opt.load_embedding = self.opt.embedding_list[action_p]
@@ -456,7 +472,7 @@ class Engine:
         if self.opt.observation == 'joint_pose':
             observation = np.array([p.getJointState(self.robotId,i)[0] for i in range(self.robotEndEffectorIndex)])
         elif self.opt.observation == 'end_pos':
-            observation = np.array(p.getLinkState (self.robotId, 7)[0])
+            observation = np.array(p.getLinkState(self.robotId, 7)[0])
         elif self.opt.observation == 'before_cnn':
             observation = np.array(observation)
 
@@ -466,10 +482,10 @@ class Engine:
         else:
             self.observation = observation
 
+        self.info = ''
         return self.observation
 
     def step(self,action):
-        self.info = ''
         if self.opt.use_dmp:
             return_value = self.step_dmp(action)
         else:
@@ -595,8 +611,15 @@ class Engine:
             img = cv2.cvtColor (img, cv2.COLOR_RGB2BGR)
             img[mask] = [127, 151, 182]
 
+        if self.opt.write_img:
+            cv2.imwrite (os.path.join (self.log_path, '{:06d}.jpg'.format (self.seq_num - 1)), img)
+        else:
+            self.img_buffer.append(img)
+            np.save(os.path.join(self.log_root,'state_{}.npy'.format(self.opt.load_embedding)),img)
 
-        cv2.imwrite (os.path.join (self.log_path, '{:06d}.jpg'.format (self.seq_num - 1)), img)
+        if self.epoch_num>self.opt.start_write:
+            cv2.imwrite (os.path.join (self.log_path, '{:06d}.jpg'.format (self.seq_num - 1)), img)
+
         self.observation = img
 
         if self.opt.observation == 'joint_pose':
@@ -622,7 +645,7 @@ class Engine:
                 self.cycle.image_transfer(self.epoch_num)
             self.eval.update(img_path=self.log_path,start_id=self.seq_num-1-self.opt.cut_frame_num)
             # self.eval.get_caption()
-            rank,probability = self.eval.eval()
+            rank,probability = self.eval.eval(self.img_buffer)
             reward = probability
             self.info += 'rank: {}\n'.format(rank)
         else:

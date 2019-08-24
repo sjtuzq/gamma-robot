@@ -93,77 +93,34 @@ def main ():
         print ("====================================")
         print ("Collection Experience...")
         print ("====================================")
-        if opt.load:
-            agent.load(7000)
+        # if opt.load: agent.load()
 
-        if opt.add_buffer:
-            # add exploration data into buffer
-            buffer_path = os.path.join(opt.project_root,'scripts','utils','buffer','buffer-100k')
-            all_action = np.load (os.path.join(buffer_path,'action_all.npy'))
-            all_reward = np.load (os.path.join(buffer_path,'reward_all.npy'))
-            all_embedding = np.load (os.path.join(buffer_path,'embedding_all.npy'))
-            all_target = np.load (os.path.join(buffer_path,'target_all.npy'))
-            all_rank = np.load (os.path.join(buffer_path,'rank_all.npy'))
-            task_state = np.load (os.path.join(buffer_path,'state.npy'))
-
-            for i in range(all_action.shape[0]):
-                if not (all_target[i] in opt.fine_tune_list):
-                    continue
-                print('add buffer data:{}'.format(i))
-                state = (all_embedding[i],task_state[all_target[i]])
-                next_state = (all_embedding[i],task_state[all_target[i]])
-                action = all_action[i]
-                reward = all_reward[i]
-                done = True
-                agent.memory.push ((state, next_state, action, reward, np.float (done)))
-
-                reward_id = np.where (np.array (env.opt.embedding_list) == all_target[i])[0][0]
-                ep_r = reward[reward_id]
-
-                if ep_r > 0:
-                    for push_t in range (4):
-                        agent.memory.push ((state, next_state, action, reward, np.float (done)))
+        buffer_root = '/scr1/system/gamma-robot/scripts/utils/buffer/211'
+        action_all = np.load(os.path.join(buffer_root,'action_all.npy'))
+        target_all = np.load(os.path.join(buffer_root,'target_all.npy'))
+        rank_all = np.load(os.path.join(buffer_root,'rank_all.npy'))
+        reward_all = np.load(os.path.join(buffer_root,'reward_all.npy'))
 
         for i in range (opt.num_iteration):
-            state = env.reset ()
-            for t in range (2000):
+            if i<4000:
+                continue
+            target = target_all[i]
+            state = env.reset (target)
 
-                action = agent.select_action (state)
-                action = action + np.random.normal (0, max_action * opt.noise_level, size=action.shape)
-                action = action.clip (-max_action, max_action)
+            # file = os.path.join(opt.project_root,'logs','tds_log','test{}'.format(211),'epoch-{}'.format(i))
+            # log_reader = open(file,'r')
+            # for line in log_reader.readlines():
+            #     line = line.strip().split(':')
+            #     if line[0]=='target':
+            #         target = int(line[1])
+            #     if line[0]=='action':
 
-                print('epoch id:{}, action:{}'.format(i,str(action)))
-                next_state, reward, done, info = env.step (action)
+            action = action_all[i]
 
-                if opt.use_embedding:
-                    reward_id = np.where(np.array(env.opt.embedding_list) == env.opt.load_embedding)[0][0]
-                    ep_r += reward[reward_id]
-                else:
-                    ep_r += reward
+            print('epoch id:{}, action:{}'.format(i,str(action)))
+            next_state, reward, done, info = env.step (action)
 
-                # if opt.render and i >= opt.render_interval : env.render()
-                agent.memory.push ((state, next_state, action, reward, np.float (done)))
-
-                if ep_r>0:
-                    for push_t in range(4):
-                        agent.memory.push ((state, next_state, action, reward, np.float (done)))
-
-                if i + 1 % 10 == 0:
-                    print ('Episode {},  The memory size is {} '.format (i, len (agent.memory.storage)))
-                if len (agent.memory.storage) >= opt.start_train - 1:
-                    agent.update (opt.update_time)
-                    opt.noise_level = opt.noise_training_level
-
-                state = next_state
-                if done or t == opt.max_episode - 1:
-                    agent.writer.add_scalar ('ep_r', ep_r, global_step=i)
-                    if i % opt.print_log == 0:
-                        print ("Ep_i \t{}, the ep_r is \t{:0.2f}, the step is \t{}".format (i, ep_r, t))
-                    ep_r = 0
-                    break
-
-            if i % opt.log_interval == 0:
-                agent.save (i)
+            print(reward,reward_all[i],rank_all[i])
 
     else:
         raise NameError ("mode wrong!!!")

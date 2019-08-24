@@ -1,3 +1,8 @@
+import math, os
+from config_a3c import opt, device
+os.environ["CUDA_VISIBLE_DEVICES"] = "{}".format(opt.cuda_id)
+
+
 import numpy as np
 import os
 import shutil
@@ -8,9 +13,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.multiprocessing as mp
-import math, os
-from config import opt, device
-os.environ["CUDA_VISIBLE_DEVICES"] = "{}".format(opt.cuda_id)
 
 
 import cv2
@@ -23,8 +25,6 @@ sys.path.append ('./Eval')
 sys.path.append ('./Envs')
 sys.path.append ('./Dmp')
 sys.path.append ('./Cycle')
-
-from config_a3c import opt, device
 
 from Solver.A3C import A3C_solver
 from Solver.A3C_embedding import A3C_solver_embedding

@@ -37,7 +37,7 @@ def push_and_pull (optim, lnet, gnet, done, s_, bs, ba, br, gamma):
 
     buffer_v_target = []
     for r in br[::-1]:
-        v_s_ = r + gamma * v_s_
+        v_s_ = r
         buffer_v_target.append (v_s_)
     buffer_v_target.reverse ()
 
@@ -226,10 +226,10 @@ class Worker (mp.Process):
 
             while True:
                 action, mu_r, sigma_r = self.lnet.choose_action (v_wrap (observation[None, :]))
-                self.env.info += 'action:{}\n'.format(str(action))
-                self.env.info += 'mu:{}\n'.format(str(mu_r))
-                self.env.info += 'sigma:{}\n'.format(str(sigma_r))
                 print ("action", action, "mu_r", mu_r, "sigma_r", sigma_r)
+                self.env.info += 'action:{}\n'.format (str (action))
+                self.env.info += 'mu:{}\n'.format (str (mu_r))
+                self.env.info += 'sigma:{}\n'.format (str (sigma_r))
 
                 action = action.clip (-0.2, 0.2)
                 observation_next, reward, done, suc = self.env.step (action)
@@ -254,22 +254,6 @@ class Worker (mp.Process):
                     buffer_s, buffer_a, buffer_r = [], [], []
                     if len (buffer_mem_s) > 20:
                         buffer_mem_s, buffer_mem_a, buffer_mem_r = [], [], []
-
-                # buffer_s.append (observation)
-                # buffer_r.append (reward)
-                # buffer_a.append (action)
-                #
-                # # if reward>0:
-                # #     for replay_id in range(5):
-                # #         buffer_s.append (observation)
-                # #         buffer_r.append (reward)
-                # #         buffer_a.append (action)
-                #
-                # if total_step % UPDATE_GLOBAL_ITER == 0 or done:  # or self.g_ep.value % (10 * UPDATE_GLOBAL_ITER):
-                #     push_and_pull (self.optim, self.lnet, self.gnet, done, observation_next, buffer_s, buffer_a,
-                #                    buffer_r, GAMMA)
-                #     print ("updateting weights")
-                #     buffer_s, buffer_a, buffer_r = [], [], []
 
                 observation = observation_next
                 total_step += 1

@@ -39,7 +39,7 @@ def push_and_pull (optim, lnet, gnet, done, s_, bs, ba, br, be, gamma):
 
     buffer_v_target = []
     for r in br[::-1]:
-        v_s_ = r + gamma * v_s_
+        v_s_ = r
         buffer_v_target.append (v_s_)
     buffer_v_target.reverse ()
 
@@ -119,6 +119,15 @@ class ACNet (nn.Module):
             nn.ReLU ()
         )
 
+        self.fc_s = nn.Sequential (
+            nn.Linear (256 + self.embedding_dim, 128),
+            nn.ReLU (),
+            nn.Linear (128, 64),
+            nn.ReLU (),
+            nn.Linear (64, 24),
+            nn.ReLU ()
+        )
+
         self.fc_v = nn.Sequential (
             nn.Linear (256 + self.embedding_dim, 128),
             nn.ReLU (),
@@ -128,35 +137,12 @@ class ACNet (nn.Module):
             nn.ReLU ()
         )
 
-        # self.mu_layer = nn.Linear (24, 3)
-        # self.sigma_layer = nn.Linear (24, 3)
-        # self.v_layer = nn.Linear (24, 1)
+        self.mu_layer = nn.Linear (24, 3)
+        self.sigma_layer = nn.Linear (24, 3)
+        self.v_layer = nn.Linear (24, 1)
 
-        self.mu_layer = nn.Sequential (
-            nn.Linear (24, 12),
-            nn.ReLU (),
-            nn.Linear (12, 6),
-            nn.ReLU (),
-            nn.Linear (6, 3),
-        )
+        set_init ([self.mu_layer, self.sigma_layer, self.v_layer])
 
-        self.sigma_layer = nn.Sequential (
-            nn.Linear (24, 12),
-            nn.ReLU (),
-            nn.Linear (12, 6),
-            nn.ReLU (),
-            nn.Linear (6, 3),
-        )
-
-        self.v_layer = nn.Sequential (
-            nn.Linear (24, 12),
-            nn.ReLU (),
-            nn.Linear (12, 6),
-            nn.ReLU (),
-            nn.Linear (6, 3),
-        )
-
-        # set_init ([self.mu_layer, self.sigma_layer, self.v_layer])
 
     def forward (self, im, e):
         im = torch.tensor (im).float ().squeeze ().to (device)
@@ -165,19 +151,32 @@ class ACNet (nn.Module):
             im = im.unsqueeze (0)
 
         im = self.cnn (im.transpose (1, 3))
-
-        e = self.fc_e(e)
-
+        e = self.fc_e (e)
         im = torch.cat ([im, e], 1)
 
         x_a = self.fc_a (im)
-        mu = self.mu_layer (x_a)
-        sigma = self.sigma_layer (x_a)
-        sigma = F.sigmoid (sigma) + 0.01
 
+        mu = self.mu_layer (x_a)
+        mu = F.tanh (mu)
+        x_s = self.fc_s (im)
+
+        sigma = self.sigma_layer (x_s)
+        sigma = F.sigmoid (sigma) + 0.005
         x_v = self.fc_v (im)
+
         values = self.v_layer (x_v)
         return mu, sigma, values
+
+        # im = torch.cat ([im, e], 1)
+        #
+        # x_a = self.fc_a (im)
+        # mu = self.mu_layer (x_a)
+        # sigma = self.sigma_layer (x_a)
+        # sigma = F.sigmoid (sigma) + 0.01
+        #
+        # x_v = self.fc_v (im)
+        # values = self.v_layer (x_v)
+        # return mu, sigma, values
 
     def choose_action (self, s, e):
         self.training = False
@@ -248,6 +247,8 @@ class Worker (mp.Process):
         total_episode = 0
 
         buffer_s, buffer_a, buffer_r, buffer_e = [], [], [], []
+        buffer_mem_s, buffer_mem_a, buffer_mem_r, buffer_mem_e = [], [], [], []
+
         while self.g_ep.value < MAX_EP:
             observation = self.env.reset ()
             observation[1] = observation[1] / 255.0
@@ -260,21 +261,14 @@ class Worker (mp.Process):
                 action, mu_r, sigma_r = self.lnet.choose_action (v_wrap (observation[1][None, :]),
                                                                  v_wrap (observation[0][None, :]))
                 print ("action", action, "mu_r", mu_r, "sigma_r", sigma_r)
+                self.env.info += 'action:{}\n'.format (str (action))
+                self.env.info += 'mu:{}\n'.format (str (mu_r))
+                self.env.info += 'sigma:{}\n'.format (str (sigma_r))
 
                 action = action.clip (-0.2, 0.2)
                 observation_next, reward, done, suc = self.env.step (action)
                 observation_next[1] = observation_next[1] / 255.0
                 observation_next[1] = (observation_next[1] - mean) / std
-
-                # reward_id = np.where (np.array (self.env.opt.embedding_list) == self.env.opt.load_embedding)[0][0]
-                # reward = reward[reward_id]
-
-                # self.writer.add_scalar ('reward', reward, global_step=self.env.epoch_num)
-
-                # buffer_s.append (observation[1])
-                # buffer_r.append (reward)
-                # buffer_a.append (action)
-                # buffer_e.append (observation[0])
 
                 reward_id_for_action = np.where ((observation[0] == self.embedding_data).sum (1) == 1024)[0][0]
                 reward_id = np.where (np.array (self.env.opt.embedding_list) == self.env.opt.load_embedding)[0][0]
@@ -284,12 +278,11 @@ class Worker (mp.Process):
                 buffer_a.append (action)
                 buffer_e.append (observation[0])
 
-                # if reward[reward_id]>0:
-                #     for replay_id in range(5):
-                #         buffer_s.append (observation[1])
-                #         buffer_r.append (reward[reward_id])
-                #         buffer_a.append (action)
-                #         buffer_e.append (observation[0])
+                if reward[reward_id] > 0.05:
+                    buffer_mem_s.append (observation[1])
+                    buffer_mem_r.append (reward[reward_id])
+                    buffer_mem_a.append (action)
+                    buffer_mem_e.append (observation[0])
 
                 if self.opt.align_sample:
                     # conjugated sample
@@ -305,16 +298,17 @@ class Worker (mp.Process):
                         buffer_a.append (action)
                         buffer_e.append (align_embedding)
 
-                if done:  # or self.g_ep.value % (10 * UPDATE_GLOBAL_ITER):
-                    push_and_pull (self.optim, self.lnet, self.gnet, done, observation_next, buffer_s, buffer_a,
-                                   buffer_r, buffer_e, GAMMA)
-                    print ("updateting weights")
+                if total_step % (UPDATE_GLOBAL_ITER + self.wid) == 0:  # or self.g_ep.value % (10 * UPDATE_GLOBAL_ITER):
+                    # sync
+                    buffer_s = buffer_s + buffer_mem_s
+                    buffer_a = buffer_a + buffer_mem_a
+                    buffer_r = buffer_r + buffer_mem_r
+                    buffer_e = buffer_e + buffer_mem_e
+                    push_and_pull (self.optim, self.lnet, self.gnet, done, observation_next,
+                                   buffer_s, buffer_a, buffer_r, buffer_e, GAMMA)
                     buffer_s, buffer_a, buffer_r, buffer_e = [], [], [], []
-
-                # if done:
-                #   suc_check += suc
-                #   episode_check += 1
-                #   total_episode += 1
+                    if len (buffer_mem_s) > 20:
+                        buffer_mem_s, buffer_mem_a, buffer_mem_r, buffer_mem_e = [], [], [], []
 
                 observation = observation_next
                 total_step += 1
